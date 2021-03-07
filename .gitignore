@@ -1,1 +1,4 @@
-out/
+out*
+test*
+chromedriver*
+.vscode

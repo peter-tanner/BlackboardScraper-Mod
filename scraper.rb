@@ -1,17 +1,23 @@
 require_relative 'session.rb'
-
+require 'pp'
 require 'fileutils'
 require 'io/console'
 
-BASEPATH = "out"
+# To put less stress on the system.
+$WAIT = 1
+$LIMIT_PATH_NAME = 24 #Int - how many characters from the original path to keep (Cuts the length of paths down to prevent files from being inaccesible on systems)
+$FILENAME_HASH_LEN = 5  # Int - how much of the file's hash to append on the end? Needed because files with the same name (but different content) can be downloaded.
+                        # If 0, there's a risk that only one out of two or more files with the same filename but different content will be downloaded.
+$SHOW_FULL_FILE_PATH = true # Bool - override $LIMIT_PATH_NAME variable for filenames, keep full name for readability.
+$BASEPATH = "out"
 
-CIO.puts "Username:"
-user = gets.chomp
+# CIO.puts "Username:"
+# user = gets.chomp
 
-CIO.puts "Password:"
-pass = STDIN.noecho(&:gets).chomp
+# CIO.puts "Password:"
+# pass = STDIN.noecho(&:gets).chomp
 
-session = BBSession.new user, pass
+session = BBSession.new #user, pass
 
 # Fetch Units
 CIO.puts
@@ -50,6 +56,7 @@ CIO.with do
     asset_count = assets.size
     assets.each_with_index do |asset, i|
         CIO.puts "Downloading asset (#{i}/#{asset_count}): #{asset.to_s}"
-        asset.download BASEPATH
+        asset.download $BASEPATH
+        sleep($WAIT)
     end
 end

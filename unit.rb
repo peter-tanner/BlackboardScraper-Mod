@@ -30,13 +30,14 @@ class BBUnit
             unless contentids.empty?
                 CIO.puts "Discovered Listing -> #{listing.text}.... valid!"
                 contentid = contentids.last.first
-                @listings[contentid] = BBContent.new(self, contentid, listing.text, "#{path}/#{id}_#{friendly_filename(name)}")
+                @listings[contentid] = BBContent.new(self, contentid, listing.text, "#{path}/#{friendly_filename(name)}_#{id}")
             else
                 CIO.puts "Discovered Listing -> #{listing.text}.... valid!"
             end
         end
         CIO.pop
         CIO.puts
+        sleep($WAIT)
     end
 
     def crawl

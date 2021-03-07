@@ -1,9 +1,11 @@
+require 'cgi'
+
 require_relative 'utils.rb'
 
-EXTENSIONS = [
-    /\.pdf$/, /\.docx$/, /\.txt$/, /\.c$/, /\.java$/, /\.class$/, /\.pptx$/, /\.ppt$/, /\.doc$/, /\.jar$/,
-    /\.java\..*$/, /\.class\..*$/, /\.csv/, /\.tar\.gz/
-]
+# EXTENSIONS = [
+#     /\.pdf$/, /\.docx$/, /\.txt$/, /\.c$/, /\.java$/, /\.class$/, /\.pptx$/, /\.ppt$/, /\.doc$/, /\.jar$/,
+#     /\.java\..*$/, /\.class\..*$/, /\.csv/, /\.tar\.gz/
+# ]
 
 class BBAsset
     attr_accessor :session
@@ -21,34 +23,57 @@ class BBAsset
     end
 
     def fqp
-        "#{path}/#{friendly_filename(name)}_#{hash[0..6]}"
+        # "#{path}/#{friendly_filename(name)}_#{hash[0..6]}"
+        "#{path}"
     end
 
     def download basepath
+        folder_metadata = "ZZZ_metadata"
         folder = "#{basepath}/#{fqp}"
-        FileUtils.mkdir_p folder
+        FileUtils.mkdir_p "#{folder}/#{folder_metadata}"
 
         url = @url
         head = @session.doHead(url)
         url = head["location"][1..-1] unless (head["location"].nil?)
         
         filename = File.basename(URI.parse(url).path)
-        filepath = "#{folder}/#{filename}"
+        hfilename = conv_filename(filename)
+        filepath = "#{folder}/#{hfilename}"
         unless File.exists? filepath
-            validext = !EXTENSIONS.reject { |x| filename.scan(x).empty? }.empty?
-            if validext
+            # validext = !EXTENSIONS.reject { |x| filename.scan(x).empty? }.empty?
+            # if validext
                 File.open(filepath, 'wb') do |f|
                     f.write @session.doGet(url).body
                 end
-            else
-                CIO.puts "-> invalid extension, skipped: #{filename}"
-            end
+
+                # Metadata info
+                File.open("#{folder}/#{folder_metadata}/#{hfilename}__metadata.csv", 'wb') do |f|
+                    f.write [
+                        "original_filename, #{filename}",
+                        "readable_filename, #{hfilename}",
+                        "url, #{url}",
+                        "hash, #{hash}"
+                    ].join("\n")
+                end
+            # else
+            #     CIO.puts "-> invalid extension, skipped: #{filename}"
+            # end
         else
             CIO.puts "-> already downloaded!"
         end
     end
 
     def to_s
-        "#{name} (#{hash[0..6]})"
+        "#{path}/#{name} (#{hash})"
+    end
+
+    def conv_filename filename
+        filename = CGI.unescape(filename)
+        ffilename_arr = $SHOW_FULL_FILE_PATH ? friendly_filename(filename,-1).split(".") : friendly_filename(filename).split(".")
+        if $FILENAME_HASH_LEN > 0
+            ffilename_arr.length > 1 ? "#{ffilename_arr[0..-2].join(".")}[#{hash[0..$FILENAME_HASH_LEN]}].#{ffilename_arr[-1]}" : "#{ffilename_arr[0]}[#{hash[0..$FILENAME_HASH_LEN]}]"
+        else
+            "#{ffilename_arr.join(".")}"
+        end
     end
 end
