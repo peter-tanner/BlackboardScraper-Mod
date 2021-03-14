@@ -1,5 +1,11 @@
 require_relative 'cio.rb'
-require 'zip'
+begin
+    require 'zip'
+rescue LoadError
+    puts "[!] rubyzip not installed - not extracting archive. Install with `gem install rubyzip`"
+    puts "[!] Zip files will not be auto-extracted."
+    puts
+end
 
 # zip util
 def unzip(zip_path)
