@@ -5,7 +5,8 @@ require 'io/console'
 
 # ARGUMENTS
 
-$BASEPATH = "/mnt/f/ARCHIVE/UNIVERSITY/bb"
+# $BASEPATH = "/mnt/f/ARCHIVE/UNIVERSITY/bb" # this is the path I normally use.
+$BASEPATH = "out"
 $COLOR = true           # Print color to terminal
 $WAIT = 5               # To put less stress on the system.
 $PATHNAME_LEN = 40      # Int - how many characters from the original path to keep (Cuts the length of paths down to prevent files from being inaccesible on systems)
@@ -81,11 +82,11 @@ if downloaded.length > 0
     downloaded.each_with_index do |f, i|
         CIO.puts colorize("+ #{f["name"]}", "\e[32m")
         if f.key?("zip_content")
-        CIO.push
-        f["zip_content"].each_with_index do |fz, j|
-            CIO.puts colorize("+ #{fz}", "\e[32m")
-        end
-        CIO.pop
+            CIO.push
+            f["zip_content"].each_with_index do |fz, j|
+                CIO.puts colorize("+ #{fz}", "\e[32m")
+            end
+            CIO.pop
         end
     end
     CIO.puts colorize("Downloaded #{downloaded.length} items.", "\e[32m")
