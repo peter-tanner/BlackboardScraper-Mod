@@ -3,19 +3,24 @@ require 'pp'
 require 'fileutils'
 require 'io/console'
 
-# To put less stress on the system.
-$WAIT = 1
-$LIMIT_PATH_NAME = 24 #Int - how many characters from the original path to keep (Cuts the length of paths down to prevent files from being inaccesible on systems)
+# ARGUMENTS
+
+$BASEPATH = "out"
+$WAIT = 5               # To put less stress on the system.
+$PATHNAME_LEN = 40      #Int - how many characters from the original path to keep (Cuts the length of paths down to prevent files from being inaccesible on systems)
+$PATHNAME_HASH_LEN = 3
+$FILENAME_LEN = -1      # -1 => unlimited length
 $FILENAME_HASH_LEN = 5  # Int - how much of the file's hash to append on the end? Needed because files with the same name (but different content) can be downloaded.
                         # If 0, there's a risk that only one out of two or more files with the same filename but different content will be downloaded.
-$SHOW_FULL_FILE_PATH = true # Bool - override $LIMIT_PATH_NAME variable for filenames, keep full name for readability.
-$BASEPATH = "out"
 
-# CIO.puts "Username:"
-# user = gets.chomp
-
-# CIO.puts "Password:"
-# pass = STDIN.noecho(&:gets).chomp
+if !File.writable?($BASEPATH)
+    if FileUtils.mkdir_p $BASEPATH
+        puts "Created output directory #{$BASEPATH}"
+    else
+        puts "Cannot output to base directory #{$BASEPATH}. Do you have permissions?"
+        exit 1
+    end
+end
 
 session = BBSession.new #user, pass
 
@@ -55,7 +60,7 @@ CIO.with do
     assets = session.units.values.map(&:collectAssets).map(&:values).flatten
     asset_count = assets.size
     assets.each_with_index do |asset, i|
-        CIO.puts "Downloading asset (#{i}/#{asset_count}): #{asset.to_s}"
+        CIO.puts "Downloading asset (#{i+1}/#{asset_count}): #{asset.to_s}"
         asset.download $BASEPATH
         sleep($WAIT)
     end

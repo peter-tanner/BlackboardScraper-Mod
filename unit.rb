@@ -21,6 +21,17 @@ class BBUnit
     def discover
         CIO.puts "Discovering Listings for Unit: #{to_s}...."
         CIO.push
+
+        folder_name = path_name(name, id)
+        write_dir_metadata( 
+                            "#{$BASEPATH}/#{path}",
+                            folder_name,
+                            "ZZZ_course_metadata",
+                            [["original_unitname", name],
+                            ["readable_unitname", folder_name],
+                            ["id", id]]
+                          )
+
         html = @session.doGet("webapps/blackboard/execute/announcement?method=search&context=course_entry&course_id=#{id}").body
         page = Nokogiri::HTML(html)
 
@@ -30,7 +41,7 @@ class BBUnit
             unless contentids.empty?
                 CIO.puts "Discovered Listing -> #{listing.text}.... valid!"
                 contentid = contentids.last.first
-                @listings[contentid] = BBContent.new(self, contentid, listing.text, "#{path}/#{friendly_filename(name)}_#{id}")
+                @listings[contentid] = BBContent.new(self, contentid, listing.text, "#{path}/#{folder_name}")
             else
                 CIO.puts "Discovered Listing -> #{listing.text}.... valid!"
             end

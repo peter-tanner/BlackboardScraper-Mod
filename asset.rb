@@ -1,6 +1,8 @@
 require 'cgi'
+require 'csv'
 
 require_relative 'utils.rb'
+require_relative 'unzip.rb'
 
 # EXTENSIONS = [
 #     /\.pdf$/, /\.docx$/, /\.txt$/, /\.c$/, /\.java$/, /\.class$/, /\.pptx$/, /\.ppt$/, /\.doc$/, /\.jar$/,
@@ -49,17 +51,21 @@ class BBAsset
                 # Metadata info
                 File.open("#{folder}/#{folder_metadata}/#{hfilename}__metadata.csv", 'wb') do |f|
                     f.write [
-                        "original_filename, #{filename}",
-                        "readable_filename, #{hfilename}",
-                        "url, #{url}",
-                        "hash, #{hash}"
-                    ].join("\n")
+                        ["original_filename", filename],
+                        ["readable_filename", hfilename],
+                        ["url", url],
+                        ["hash", hash],
+                    ].map(&:to_csv).join
                 end
             # else
             #     CIO.puts "-> invalid extension, skipped: #{filename}"
             # end
         else
             CIO.puts "-> already downloaded!"
+        end
+
+        if filename.split(".")[-1] == "zip"
+            unzip(filepath)
         end
     end
 
@@ -69,7 +75,7 @@ class BBAsset
 
     def conv_filename filename
         filename = CGI.unescape(filename)
-        ffilename_arr = $SHOW_FULL_FILE_PATH ? friendly_filename(filename,-1).split(".") : friendly_filename(filename).split(".")
+        ffilename_arr = friendly_filename(filename,$FILENAME_LEN).split(".")
         if $FILENAME_HASH_LEN > 0
             ffilename_arr.length > 1 ? "#{ffilename_arr[0..-2].join(".")}[#{hash[0..$FILENAME_HASH_LEN]}].#{ffilename_arr[-1]}" : "#{ffilename_arr[0]}[#{hash[0..$FILENAME_HASH_LEN]}]"
         else

@@ -44,12 +44,10 @@ class BBSession
         c.each{ |c|
             @cookies[c.split('=')[0]] = c.split('=')[1]
         }
-        puts @cookies
         if @cookies.length == 0
             puts 'Login error. Check your credentials. Exiting scraper.'
             exit -1
         end
-        #@cookies = [redacted]
     end
 
     def doPost path, payload

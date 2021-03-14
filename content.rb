@@ -1,4 +1,5 @@
 require 'digest'
+require 'csv'
 
 require_relative 'asset.rb'
 require_relative 'utils.rb'
@@ -31,26 +32,24 @@ class BBContent
 
         html = @unit.session.doGet("webapps/blackboard/content/listContent.jsp?course_id=#{@unit.id}&content_id=#{id}&mode=reset").body
         page = Nokogiri::HTML(html)
+
+        folder_name = path_name(name, id)
+        write_dir_metadata(
+                            "#{$BASEPATH}/#{path}",
+                            folder_name,
+                            "ZZZ_folder_metadata",
+                            [["original_directoryname", name],
+                            ["readable_directoryname", folder_name],
+                            ["id", id]]
+                          )
+
         page.css("ul#content_listContainer li div.item h3 a").select { |x| x['href'].start_with?("/webapps/blackboard/content") && !x['href'].include?("launchAssessment.jsp?") }.each do |listing|
             CIO.puts "-> Found Content: #{listing.text}"
             # CIO.puts "#{listing}"
-            CIO.push
+            CIO.push            
             contentid = listing['href'].scan(/\&content_id=([-_0-9]+)/).last.first
             unless contentid == @id || @@contentids.include?(contentid)
-                folder_metadata = "ZZZ_folder_metadata"
-                # Need to work on getting this folder metadata thing working (to reduce file path length)
-                # puts "#{$BASEPATH}/#{path}/#{folder_metadata}"
-                # puts "#{path}/#{friendly_filename(name)}_#{id}"
-                # FileUtils.mkdir_p "#{$BASEPATH}/#{path}/#{folder_metadata}"
-                # File.open("#{$BASEPATH}/#{path}/#{folder_metadata}/#{friendly_filename(name)}__metadata.csv", 'wb') do |f|
-                #     f.write [
-                #         "original_directoryname, #{name}",
-                #         "readable_directoryname, #{friendly_filename(name)}",
-                #         "id, #{id}",
-                #     ].join("\n")
-                # end
-
-                @contents[contentid] = BBContent.new(unit, contentid, listing.text, "#{path}/#{friendly_filename(name)}_#{id}")
+                @contents[contentid] = BBContent.new(unit, contentid, listing.text, "#{path}/#{folder_name}")
                 @@contentids << contentid
                 @contents[contentid].crawl
             else
@@ -92,7 +91,7 @@ class BBContent
         CIO.puts "-> Found Asset: #{asset.text} in #{sectionName}"
         title = sectionName + "_" + title if title != sectionName
         hash = Digest::MD5.hexdigest asset['href']
-        @assets[hash] = BBAsset.new(@unit.session, hash, asset['href'], title, "#{path}/#{friendly_filename(name)}_#{id}/#{sectionName}")
+        @assets[hash] = BBAsset.new(@unit.session, hash, asset['href'], title, "#{path}/#{path_name(name, id)}/#{sectionName}")
     end
 
     def collectAssets
