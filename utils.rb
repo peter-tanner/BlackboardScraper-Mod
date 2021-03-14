@@ -15,7 +15,12 @@ def friendly_filename(filename, limit=$PATHNAME_LEN)
     )
 end
 def path_name(name, id)
-    "#{friendly_filename(name)}[#{id.gsub(/_/,'').reverse()[1..$PATHNAME_HASH_LEN-1].reverse()}]"
+    id_ = id.gsub(/_/,'')
+    if $PATHNAME_HASH_LEN >= id_.length
+        "#{friendly_filename(name)}[#{id_}]"
+    else
+        "#{friendly_filename(name)}[#{id.gsub(/_/,'').reverse()[1..$PATHNAME_HASH_LEN].reverse()}]"
+    end
     # Negative because the ID is sequential and the first few numbers only change so often. Also start at idx 1 because last number is ALWAYS 1.
 end
 
@@ -24,4 +29,8 @@ def write_dir_metadata(path, folder_name, metadata_folder_name, arr)
     File.open("#{path}/#{metadata_folder_name}/#{folder_name}__metadata.csv", 'wb') do |f|
         f.write arr.map(&:to_csv).join
     end
+end
+
+def colorize(str, color, color_enable=$COLOR)
+    color_enable ? color+str+"\e[0m" : str
 end

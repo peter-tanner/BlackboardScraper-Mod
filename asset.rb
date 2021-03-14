@@ -30,6 +30,7 @@ class BBAsset
     end
 
     def download basepath
+        response = {}
         folder_metadata = "ZZZ_metadata"
         folder = "#{basepath}/#{fqp}"
         FileUtils.mkdir_p "#{folder}/#{folder_metadata}"
@@ -44,19 +45,21 @@ class BBAsset
         unless File.exists? filepath
             # validext = !EXTENSIONS.reject { |x| filename.scan(x).empty? }.empty?
             # if validext
-                File.open(filepath, 'wb') do |f|
-                    f.write @session.doGet(url).body
-                end
+            File.open(filepath, 'wb') do |f|
+                f.write @session.doGet(url).body
+            end
 
-                # Metadata info
-                File.open("#{folder}/#{folder_metadata}/#{hfilename}__metadata.csv", 'wb') do |f|
-                    f.write [
-                        ["original_filename", filename],
-                        ["readable_filename", hfilename],
-                        ["url", url],
-                        ["hash", hash],
-                    ].map(&:to_csv).join
-                end
+            # Metadata info
+            File.open("#{folder}/#{folder_metadata}/#{hfilename}__metadata.csv", 'wb') do |f|
+                f.write [
+                    ["original_filename", filename],
+                    ["readable_filename", hfilename],
+                    ["url", url],
+                    ["hash", hash],
+                ].map(&:to_csv).join
+            end
+
+            response["name"] = to_s()
             # else
             #     CIO.puts "-> invalid extension, skipped: #{filename}"
             # end
@@ -65,8 +68,11 @@ class BBAsset
         end
 
         if filename.split(".")[-1] == "zip"
-            unzip(filepath)
+            response["name"] = to_s()
+            response["zip_content"] = unzip(filepath)
         end
+        
+        return response
     end
 
     def to_s

@@ -15,6 +15,18 @@ import json
 import re
 import sys
 
+def try_cookie(driver):
+    for entry in driver.get_log('performance'):
+        parameters = json.loads(entry["message"])['message']['params']
+        if (
+            'documentURL' in  parameters.keys()
+            and re.search(r'https://lms.uwa.edu.au/webapps/portal.*', parameters['documentURL']) != None
+        ):
+            print(parameters['redirectResponse']['requestHeaders']['Cookie'])
+            driver.quit()
+            exit(0)
+
+
 print('UserID: ', file=sys.stderr)
 USERNAME = input()+'@student.uwa.edu.au'
 print('Password: ', file=sys.stderr)
@@ -45,6 +57,8 @@ driver = webdriver.Chrome(
 
 driver.get('https://lms.uwa.edu.au')
 
+try_cookie(driver)
+
 WaitClickable(driver,BOX_USERNAME).send_keys(USERNAME)
 WaitClickable(driver,BUTTON_NEXT).click()
 print('Entered username.', file=sys.stderr)
@@ -59,16 +73,9 @@ except:
     exit(2)
 
 WaitClickable(driver,BUTTON_DENY).click()
+# WaitClickable(driver,BUTTON_NEXT).click() #IF you want to remember credentials, switch these comments
 
-for entry in driver.get_log('performance'):
-    parameters = json.loads(entry["message"])['message']['params']
-    if (
-        'documentURL' in  parameters.keys()
-        and re.search(r'https://lms.uwa.edu.au/webapps/portal.*', parameters['documentURL']) != None
-    ):
-        print(parameters['redirectResponse']['requestHeaders']['Cookie'])
-        driver.quit()
-        exit(0)
+try_cookie(driver)
 
 print('Could not get auth cookie - Invalid ID or password?', file=sys.stderr)
 driver.quit()
