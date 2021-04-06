@@ -1,4 +1,5 @@
 require 'digest'
+require 'pp'
 require 'csv'
 
 require_relative 'asset.rb'
@@ -62,9 +63,9 @@ class BBContent
             h3 = section.css("div.item h3")
             unless h3.empty?
                 sectionName = h3.first.text.strip
-                section.css("div.details div div ul.attachments li a")
-                    .select { |x| x['href'].start_with?("/bbcswebdav") }
-                    .each { |asset| addAsset(asset, sectionName) }
+                # section.css("div.details div div ul.attachments li a")
+                #     .select { |x| x['href'].start_with?("/bbcswebdav") }
+                #     .each { |asset| addAsset(asset, sectionName) }    #Redundant because of the last expression.
 
                 section.css("div.item h3 a")
                     .select { |x| x['href'].start_with?("/bbcswebdav") }
@@ -74,9 +75,10 @@ class BBContent
                 # But turns out the items are actually not inside of the folder (when you click on the folder with the content_id link, it says "There is no content to display.")
                 # Instead, the items are placed in the description of the folder. So the scraper treats it as the same page (and not inside of the folder).
                 # Kinda hard to explain but basically don't be alarmed if you see some items under folders that don't have a content_id on the end.
-                section.css("div.details div div a")
+                section.css("div.details * a[href]")
                     .select { |x| x['href'].include?("/bbcswebdav") }
                     .each { |asset| 
+                        # pp asset
                         asset['href'] = asset['href'].sub(/^.*\/bbcswebdav/,'/bbcswebdav')
                         addAsset(asset, sectionName) 
                     }
@@ -87,11 +89,16 @@ class BBContent
     end
 
     def addAsset asset, sectionName
-        title = asset.text.strip
-        CIO.puts "-> Found Asset: #{asset.text} in #{sectionName}"
+        href = asset['href']
+        text = "NULL"
+        if !asset.text.empty?
+            text = asset.text
+        end
+        title = text.strip
+        CIO.puts "-> Found Asset: #{text} in #{sectionName}"
         title = sectionName + "_" + title if title != sectionName
-        hash = Digest::MD5.hexdigest asset['href']
-        @assets[hash] = BBAsset.new(@unit.session, hash, asset['href'], title, "#{path}/#{path_name(name, id)}/#{sectionName}")
+        hash = Digest::MD5.hexdigest href
+        @assets[hash] = BBAsset.new(@unit.session, hash, href, title, "#{path}/#{path_name(name, id)}/#{sectionName}")
     end
 
     def collectAssets

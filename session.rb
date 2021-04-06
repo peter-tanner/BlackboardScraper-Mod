@@ -13,7 +13,7 @@ class BBSession
     attr_accessor :units
     attr_accessor :http
 
-    def initialize #usr, pwd
+    def initialize usr, pwd
         # @user = usr
         # @pwd = Base64.encode64(pwd)
         # @pwd_unicode = Base64.encode64(pwd.split("").product(["\x00"]).flatten.join("").force_encoding("US-ASCII")).strip
@@ -39,7 +39,11 @@ class BBSession
 
         @units = {}
 
-        cookie_string = `python3 login.py`.strip
+        pyargs = (usr.size > 0 ? " --username #{usr}" : "")+(pwd.size > 0 ? " --password #{pwd}" : "")
+        pwd = nil
+        usr = nil
+        cookie_string = `python3 login.py#{pyargs}`.strip
+        pyargs = nil
         c = cookie_string.split('; ')
         c.each{ |c|
             @cookies[c.split('=')[0]] = c.split('=')[1]
@@ -67,36 +71,51 @@ class BBSession
         res
     end
 
-    def doGet path,isURI = false
-        if isURI
-            uri = URI.parse(path)
+
+    def doRequest path, redirects = true, mode="get"
+        uri = URI.parse(path)
+        if ["http", "https"].include?(uri.scheme)
             http_ = Net::HTTP.new(uri.host, uri.port)
             http_.use_ssl = true
         else
             uri = makeURI(path)
             http_ = @http
         end
-        req = Net::HTTP::Get.new(uri.request_uri)
+        http_ = Net::HTTP.new(uri.host, uri.port)
+        http_.use_ssl = true
+
+        req = case mode
+            when "get"  then Net::HTTP::Get.new(uri.request_uri)
+            when "head" then Net::HTTP::Head.new(uri.request_uri)
+        end
         req["Cookie"] = @cookies.map { |k,v| "#{k}=#{v}" }.join(";")
         req['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
         resp = http_.request req
-        if resp.code == "302" && !resp['location'].empty?
-            doGet(resp['location'], true)   # This is because blackboard serves the file over CDN. The webdav link redirects to a generated CDN link.
+        if redirects && resp.code == "302" && !resp['location'].empty?
+            doRequest(resp['location'], true, mode)   # This is because blackboard serves the file over CDN. The webdav link redirects to a generated CDN link.
         else
             resp
         end
     end
 
-    def doHead path
-        uri = makeURI(path)
-        req = Net::HTTP::Head.new(uri.request_uri)
-        req["Cookie"] = @cookies.map { |k,v| "#{k}=#{v}" }.join(";")
-        req['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
-        @http.request req
+    def doGet path, redirects = true
+        doRequest(path, redirects, "get")
     end
 
+    def doHead path, redirects = true
+        doRequest(path, redirects, "head")
+    end
+
+    # def doHead path
+    #     uri = makeURI(path)
+    #     req = Net::HTTP::Head.new(uri.request_uri)
+    #     req["Cookie"] = @cookies.map { |k,v| "#{k}=#{v}" }.join(";")
+    #     req['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
+    #     @http.request req
+    # end
+
     def makeURI path
-        URI.parse("#{@baseurl}/#{path}")
+        URI.join(@baseurl,path)
     end
 
     def fetchUnits

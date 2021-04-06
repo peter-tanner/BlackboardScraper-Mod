@@ -8,12 +8,14 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.chrome.options import Options
 # ---
+import os
 import requests
 import time
 import getpass
 import json
 import re
 import sys
+import argparse
 
 def try_cookie(driver):
     for entry in driver.get_log('performance'):
@@ -24,11 +26,22 @@ def try_cookie(driver):
         ):
             print(parameters['redirectResponse']['requestHeaders']['Cookie'])
             driver.quit()
+            os.system("tmux detach")
             exit(0)
 
 
-print('UserID: ', file=sys.stderr)
-USERNAME = input()+'@student.uwa.edu.au'
+parser = argparse.ArgumentParser(description='Automated microsoft SSO login.')
+# parser.add_argument("-p", "--password", help="Automatically use provided password", default="")
+parser.add_argument("-u", "--username", help="Automatically use provided userID", default="")
+
+args = parser.parse_args()
+USERNAME = args.username
+# PASSWORD = args.password
+if len(USERNAME) == 0:
+    print('UserID: ', file=sys.stderr)
+    USERNAME = input()
+USERNAME += '@student.uwa.edu.au'
+# if len(PASSWORD) == 0:
 print('Password: ', file=sys.stderr)
 PASSWORD = getpass.getpass('')
 
@@ -48,7 +61,7 @@ CAPABILITIES['goog:loggingPrefs'] = {'performance': 'ALL'}
 OPTIONS = Options()
 OPTIONS.add_argument("--headless")
 driver = webdriver.Chrome(
-                            executable_path='./chromedriver.exe',
+                            executable_path='chromedriver',
                             desired_capabilities=CAPABILITIES,
                             options=OPTIONS
                         )

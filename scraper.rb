@@ -1,14 +1,25 @@
 require_relative 'session.rb'
-require 'pp'
+require 'optparse'
 require 'fileutils'
 require 'io/console'
 
-# ARGUMENTS
+options = {}
+pass = ""
+user = ""
+OptionParser.new do |opts|
+    opts.banner = "Usage: scraper.rb [options]"
+    # opts.on("-p", "--password=PASSWORD", "Automatically use provided password") do |v|
+    #     pass = v
+    # end   # NOT SAFE DO NOT USE!!
+    opts.on("-u", "--username=USERNAME", "Automatically use provided userID") do |v|
+        user = v
+    end
+end.parse!
 
 # $BASEPATH = "/mnt/f/ARCHIVE/UNIVERSITY/bb" # this is the path I normally use.
-$BASEPATH = "out"
+$BASEPATH = "../blackboard"
 $COLOR = true           # Print color to terminal
-$WAIT = 5               # To put less stress on the system.
+$WAIT = 2               # To put less stress on the system.
 $PATHNAME_LEN = 40      # Int - how many characters from the original path to keep (Cuts the length of paths down to prevent files from being inaccesible on systems)
 $PATHNAME_HASH_LEN = 3
 $FILENAME_LEN = -1      # -1 => unlimited length
@@ -24,7 +35,9 @@ if !File.writable?($BASEPATH)
     end
 end
 
-session = BBSession.new #user, pass
+session = BBSession.new user, pass
+user = nil
+pass = nil
 
 # Fetch Units
 CIO.puts
@@ -74,22 +87,27 @@ CIO.with do
 end
 
 CIO.puts "FINISHED DOWNLOADING ITEMS!"
+
+itemcount = downloaded.length
 if downloaded.length > 0
     puts ""
     puts ""
     CIO.puts " - DOWNLOAD SUMMARY - "
     CIO.push
     downloaded.each_with_index do |f, i|
-        CIO.puts colorize("+ #{f["name"]}", "\e[32m")
-        if f.key?("zip_content")
+        if ( !f.key?("metacontent") )
+            CIO.puts colorize("+ #{f["name"]}", "\e[32m")
+        elsif ( f.key?("metacontent") && f["metacontent"].length > 0 )
+            itemcount += f["metacontent"].length
+            CIO.puts colorize("+ #{f["name"]}", "\e[32m")
             CIO.push
-            f["zip_content"].each_with_index do |fz, j|
+            f["metacontent"].each_with_index do |fz, j|
                 CIO.puts colorize("+ #{fz}", "\e[32m")
             end
             CIO.pop
         end
     end
-    CIO.puts colorize("Downloaded #{downloaded.length} items.", "\e[32m")
+    CIO.puts colorize("Downloaded #{itemcount} items.", "\e[32m")
     print "Press any key to continue . . ."
     STDIN.getch
     puts ""
