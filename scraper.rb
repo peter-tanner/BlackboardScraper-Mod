@@ -2,6 +2,7 @@ require_relative 'session.rb'
 require 'optparse'
 require 'fileutils'
 require 'io/console'
+require 'date'
 
 options = {}
 pass = ""
@@ -108,6 +109,7 @@ if downloaded.length > 0
         end
     end
     CIO.puts colorize("Downloaded #{itemcount} items.", "\e[32m")
+    CIO.save "#{$BASEPATH}/ZZZ_scraper_logs/#{DateTime.now.strftime('%Y-%m-%dT%H%M')}.log"
     print "Press any key to continue . . ."
     STDIN.getch
     puts ""

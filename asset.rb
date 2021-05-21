@@ -47,6 +47,10 @@ class BBAsset
         end
 
         head_cdn = @session.doHead(url, true)
+        if ["404"].include?(head_cdn)
+            CIO.puts colorize("-> Error "+head_cdn, "\e[31m")
+            return {}
+        end
         etag = head_cdn['etag'].undump
         @hash = Digest::MD5.hexdigest etag
         

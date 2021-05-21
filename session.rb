@@ -93,6 +93,8 @@ class BBSession
         resp = http_.request req
         if redirects && resp.code == "302" && !resp['location'].empty?
             doRequest(resp['location'], true, mode)   # This is because blackboard serves the file over CDN. The webdav link redirects to a generated CDN link.
+        elsif ["404"].include?(resp.code)
+            return resp.code
         else
             resp
         end
