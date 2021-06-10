@@ -25,9 +25,14 @@ class BBAsset
         @url = url
         @name = name
         @path = path
+        @regular_asset = false
 
         @folder_metadata = "ZZZ_metadata"
         @folder_archive = "ZZZ_archive"
+    end
+
+    def setRegularAsset state
+        @regular_asset = state
     end
 
     def fqp
@@ -41,9 +46,11 @@ class BBAsset
 
         url = @url
         # If it contains cdn url don't change base url. (Cannot get filename from that temp. url)
-        newurl = @session.doHead(url, false)["location"]
-        unless (newurl.nil? || newurl.include?("blackboardcdn.com"))
-            url = newurl
+        if !@regular_asset
+            newurl = @session.doHead(url, false)["location"]
+            unless (newurl.nil? || newurl.include?("blackboardcdn.com"))
+                url = newurl
+            end
         end
 
         head_cdn = @session.doHead(url, true)
@@ -92,6 +99,7 @@ class BBAsset
 
             # Metadata info
             metacsv = [
+                ["outside_blackboard",  (!@regular_asset).to_s],
                 ["original_filename",   filename],
                 ["readable_filename",   hfilename],
                 ["url",                 url],
@@ -101,10 +109,10 @@ class BBAsset
                 ["last-modified",       head_cdn["last-modified"]],
                 ["content-length",      head_cdn["content-length"]],
                 ["age",                 head_cdn["age"]],
-            ].map(&:to_csv).join
+            ]
 
             File.open(metacsv_filepath, 'wb') do |f|
-                f.write metacsv
+                f.write(metacsv.map(&:to_csv).join)
             end
             FileUtils.cp(metacsv_filepath, metacsv_filepath_archive)
 

@@ -11,7 +11,7 @@ OptionParser.new do |opts|
     opts.banner = "Usage: scraper.rb [options]"
     # opts.on("-p", "--password=PASSWORD", "Automatically use provided password") do |v|
     #     pass = v
-    # end   # NOT SAFE DO NOT USE!!
+    # end   # NOT SAFE DO NOT USE!! - shows in top, etc.
     opts.on("-u", "--username=USERNAME", "Automatically use provided userID") do |v|
         user = v
     end

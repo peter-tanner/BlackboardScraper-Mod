@@ -2,6 +2,7 @@ require 'nokogiri'
 require 'csv'
 require 'uri'
 
+require_relative 'formats.rb'
 require_relative 'asset.rb'
 require_relative 'utils.rb'
 require_relative 'cio.rb'
@@ -18,23 +19,7 @@ class HTMLUnpacker
         @session = session
         @assets = {}
     end
-
-    def scheme url
-        if url.include?("https://")
-            "https"
-        elsif url.include?("http://")
-            "http"
-        elsif url.include?("mailto:")
-            "mailto"
-        elsif url.include?("file:///")
-            "file"
-        elsif url.include?("ftp://")
-            "ftp"
-        else
-            nil
-        end
-    end
-
+    
     def parseLinks
         CIO.puts colorize("-> Assets in file #{File.basename(@filepath)}","\e[1;33m")
         CIO.push
@@ -44,23 +29,35 @@ class HTMLUnpacker
         doc = Nokogiri::HTML(file)
         basepath = csv.find{|row| row[0] == 'url'}[1].match(/^.*\//)[0]
         
-        doc.css("* a[href]")
-            .each { |asset|
-                link = asset['href'].strip.gsub(" ","%20").gsub("\\","/") #Lazy sub.
-                if ["http", "https"].include?(scheme(link))
+        doc.traverse do |el|
+            [el[:src], el[:href]].grep(/\./).each do |link|
+                link = link.strip.gsub(" ","%20").gsub("\\","/") #Lazy sub.
+                scheme = Formats.scheme(link)
+                if ["http", "https"].include?(scheme)
                     if link.include?("/bbcswebdav")
                         fpath = link.sub(/^.*\/bbcswebdav/,"/bbcswebdav")
                         addAsset(fpath, fpath.sub(/.*\//, ""))
+                    elsif Formats::WHITELIST.include?(File.extname(link).downcase)
+                        addAsset(link, link.sub(/.*\//, ""))
                     else
+                        CIO.puts "Etc. resource "+link+" - [1]skipped"
                         # # This can be anything like a YT link.
-                        # puts "Etc. resource "+link
                     end
-                elsif scheme(link) == nil && ![".html", ".htm"].include?(File.extname(link))
+                elsif scheme == "relative" && ![".html", ".htm"].include?(File.extname(link).downcase)
                     fpath = File.join(basepath,link)
                     addAsset(fpath, link)
                 end
-            }
+            end
+        end
         CIO.pop
+    end
+
+    def addRegularAsset link, title
+        CIO.puts "-> Found Non-Blackboard Asset: "+title
+        hash = Digest::MD5.hexdigest link
+        asset = BBAsset.new(@session, hash, link, title, @downloadpath)
+        asset.setRegularAsset(true)
+        @assets[hash] = asset
     end
 
     def addAsset link, title

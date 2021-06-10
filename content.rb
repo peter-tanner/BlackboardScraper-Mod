@@ -1,6 +1,7 @@
 require 'digest'
 require 'pp'
 require 'csv'
+require 'fileutils'
 
 require_relative 'asset.rb'
 require_relative 'utils.rb'
@@ -34,15 +35,19 @@ class BBContent
         html = @unit.session.doGet("webapps/blackboard/content/listContent.jsp?course_id=#{@unit.id}&content_id=#{id}&mode=reset").body
         page = Nokogiri::HTML(html)
 
+        unit_path = "#{$BASEPATH}/#{path}"
         folder_name = path_name(name, id)
         write_dir_metadata(
-                            "#{$BASEPATH}/#{path}",
+                            unit_path,
                             folder_name,
                             "ZZZ_folder_metadata",
                             [["original_directoryname", name],
                             ["readable_directoryname", folder_name],
                             ["id", id]]
                           )
+
+        FileUtils.mkdir_p "#{unit_path}/#{folder_name}"
+        File.write("#{unit_path}/#{folder_name}/ZZZ_BlackboardPage.html", html) # Need to add stuff to download assets from these pages.
 
         page.css("ul#content_listContainer li div.item h3 a").select { |x| x['href'].start_with?("/webapps/blackboard/content") && !x['href'].include?("launchAssessment.jsp?") }.each do |listing|
             CIO.puts "-> Found Content: #{listing.text}"
