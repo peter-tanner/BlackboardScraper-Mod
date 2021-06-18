@@ -6,6 +6,7 @@ require_relative 'formats.rb'
 require_relative 'asset.rb'
 require_relative 'utils.rb'
 require_relative 'cio.rb'
+require_relative 'utils.rb'
 
 class HTMLUnpacker
     
@@ -31,7 +32,7 @@ class HTMLUnpacker
         
         doc.traverse do |el|
             [el[:src], el[:href]].grep(/\./).each do |link|
-                link = link.strip.gsub(" ","%20").gsub("\\","/") #Lazy sub.
+                link = clean_url(link)
                 scheme = Formats.scheme(link)
                 if ["http", "https"].include?(scheme)
                     if link.include?("/bbcswebdav")

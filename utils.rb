@@ -1,4 +1,4 @@
-def truncate(int,string)
+fdef truncate(int,string)
     if string.length > int && int > 0
         string[0..int-1]
     else
@@ -33,4 +33,8 @@ end
 
 def colorize(str, color, color_enable=$COLOR)
     color_enable ? color+str+"\e[0m" : str
+end
+
+def clean_url(url)
+    return url.strip.gsub(" ","%20").gsub("\\","/") #Lazy sub.
 end

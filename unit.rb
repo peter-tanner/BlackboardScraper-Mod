@@ -1,4 +1,5 @@
 require_relative 'content.rb'
+require_relative 'contenttypes.rb'
 require_relative 'utils.rb'
 require_relative 'cio.rb'
 
@@ -16,6 +17,7 @@ class BBUnit
         @path = path
 
         @listings = {}
+        @tools = {}
     end
 
     def discover
@@ -37,19 +39,39 @@ class BBUnit
 
         page.css('ul#courseMenuPalette_contents li a').each do |listing|
 
+            valid = false
             contentids = listing['href'].scan(/\&content_id=([-_0-9]+)\&/)
+            toolids = listing['href'].scan(/\&tool_id=([-_0-9]+)\&/)
             unless contentids.empty?
-                CIO.puts "Discovered Listing -> #{listing.text}.... valid!"
+                CIO.puts "Discovered Listing -> #{listing.text}.... valid! (Content)"
                 contentid = contentids.last.first
-                @listings[contentid] = BBContent.new(self, contentid, listing.text, "#{path}/#{folder_name}")
-            else
-                CIO.puts "Discovered Listing -> #{listing.text}.... valid!"
+                @listings[contentid] = BBContent.new(self, contentid, listing.text, "#{path}/#{folder_name}", CONTENT_TYPE::CONTENT)
+                valid = true
+            end
+            
+            unless toolids.empty?
+                CIO.puts "Discovered Listing -> #{listing.text}.... valid! (Tool)"
+                toolid = toolids.last.first
+                @listings[toolid] = BBContent.new(self, toolid, listing.text, "#{path}/#{folder_name}/ZZZ_BlackboardTools", CONTENT_TYPE::TOOL)
+                valid = true
+            end
+
+            unless valid
+                CIO.puts "Discovered Listing -> #{listing.text}.... valid! (???)"
             end
         end
         CIO.pop
         CIO.puts
         sleep($WAIT)
     end
+
+    # def getTools
+        
+    #     FileUtils.mkdir_p "#{unit_path}/#{folder_name}/ZZZ_BlackboardTools"
+    #     File.write("#{unit_path}/#{folder_name}/ZZZ_BlackboardTools/ZZZ_BlackboardPage.html", html)
+    #     pp @name
+    #     pp @tools
+    # end
 
     def crawl
         CIO.puts "Crawling resources for Units: #{to_s}..."

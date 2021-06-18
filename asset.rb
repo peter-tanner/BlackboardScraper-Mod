@@ -22,7 +22,7 @@ class BBAsset
         @session = session
         @pathhash = pathhash
         @hash = ""
-        @url = url
+        @url = clean_url(url)
         @name = name
         @path = path
         @regular_asset = false

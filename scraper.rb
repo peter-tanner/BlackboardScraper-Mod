@@ -69,6 +69,11 @@ CIO.with do
     end
 end
 
+#debug
+# CIO.puts
+# session.units.values.each(&:getTools)
+# exit -1
+
 # Download Assets
 downloaded = []
 
