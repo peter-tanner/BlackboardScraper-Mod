@@ -22,7 +22,8 @@ def try_cookie(driver):
         parameters = json.loads(entry["message"])['message']['params']
         if (
             'documentURL' in  parameters.keys()
-            and re.search(r'https://lms.uwa.edu.au/webapps/portal.*', parameters['documentURL']) != None
+            and 'redirectResponse' in parameters.keys()
+            and re.search(r'https://lms.uwa.edu.au/ultra', parameters['documentURL']) != None
         ):
             print(parameters['redirectResponse']['requestHeaders']['Cookie'])
             driver.quit()
@@ -68,7 +69,7 @@ driver = webdriver.Chrome(
 
 # ---
 
-driver.get('https://lms.uwa.edu.au')
+driver.get('https://lms.uwa.edu.au/ultra')
 
 try_cookie(driver)
 
@@ -93,24 +94,3 @@ try_cookie(driver)
 print('Could not get auth cookie - Invalid ID or password?', file=sys.stderr)
 driver.quit()
 exit(1)
-
-# with open('./test.json','w') as f:
-#     f.write(json.dumps(AUTH_COOKIE))
-# print('Cookie: '+str(parameters['redirectResponse']['requestHeaders']['Cookie']))
-
-
-#
-# etc:
-#
-
-# ANNOUNCEMENTS
-# curl 'https://lms.uwa.edu.au/webapps/portal/execute/tabs/tabAction' \
-#   --data-raw 'action=refreshAjaxModule&modId=_1_1&tabId=_1_1&tab_tab_group_id=_1_1' \
-
-# UNITS
-# curl 'https://lms.uwa.edu.au/webapps/portal/execute/tabs/tabAction' \
-#   --data-raw 'action=refreshAjaxModule&modId=_3_1&tabId=_1_1&tab_tab_group_id=_1_1' \
-
-# ORGANISATIONS
-# curl 'https://lms.uwa.edu.au/webapps/portal/execute/tabs/tabAction' \
-#   --data-raw 'action=refreshAjaxModule&modId=_3_1&tabId=_1_1&tab_tab_group_id=_1_1' \
