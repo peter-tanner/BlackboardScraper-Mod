@@ -124,7 +124,7 @@ class BBSession
         puts "Fetching Units...."
         CIO.push
 
-        # html = doGet("webapps/portal/execute/tabs/tabAction?tab_tab_group_id=_2_1").body
+        # html = doGet("webapps/portal/execute/tabs/tabAction?action=refreshAjaxModule&modId=_4_1&tabId=_1_1&tab_tab_group_id=_1_1").body # use for community pages!
         html = doGet("webapps/portal/execute/tabs/tabAction?action=refreshAjaxModule&modId=_3_1&tabId=_1_1&tab_tab_group_id=_1_1").body
         page = Nokogiri::HTML(html)
         @units = Hash[page.css('ul.courseListing li a').map do |el|

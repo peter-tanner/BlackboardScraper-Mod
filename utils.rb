@@ -1,4 +1,4 @@
-fdef truncate(int,string)
+def truncate(int,string)
     if string.length > int && int > 0
         string[0..int-1]
     else
@@ -10,6 +10,7 @@ def friendly_filename(filename, limit=$PATHNAME_LEN)
         limit,
         filename.gsub(/[^[:print:]]/,'')#.gsub(/[^\w\s_-]+/, '')
             .gsub(/[\:\/\<\>\"\\\/\|\?\*]/,'')  # Windows forbidden characters.
+            .gsub(/[.]([\\\/])/,'_\\1')  # cannot have a trailing dot for windows.
             .gsub(/(^|\b\s)\s+($|\s?\b)/, '\\1\\2')
             # .gsub(/\s+/, '_')
     )
