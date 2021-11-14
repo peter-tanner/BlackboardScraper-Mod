@@ -2,6 +2,7 @@ require_relative 'content.rb'
 require_relative 'contenttypes.rb'
 require_relative 'utils.rb'
 require_relative 'cio.rb'
+require_relative 'constants.rb'
 
 class BBUnit
     attr_accessor :id
@@ -20,15 +21,24 @@ class BBUnit
         @tools = {}
     end
 
+    def getEnrolled dir, name
+        request = "webapps/blackboard/execute/searchRoster?sortDir=ASCENDING&sortCol=column1&userInfoSearchKeyString=FIRSTNAME&userInfoSearchOperatorString=Contains&course_id=#{@id}&action=sort&courseId=#{@id}&editPaging=true&numResults=#{ENROL_GET_LIMIT}"
+        enrolled_list = @session.doGet(request).body
+        FileUtils.mkdir_p dir
+        File.write("#{dir}/#{name}", enrolled_list)
+    end
+
     def discover
         CIO.puts "Discovering Listings for Unit: #{to_s}...."
         CIO.push
 
         folder_name = path_name(name, id)
+        # Write course metadata
+        getEnrolled("#{$BASEPATH}/#{path}/#{COURSE_METADATA_DIRNAME}", "#{folder_name}#{ENROLLED_SUFFIX}")
         write_dir_metadata( 
                             "#{$BASEPATH}/#{path}",
                             folder_name,
-                            "ZZZ_course_metadata",
+                            COURSE_METADATA_DIRNAME,
                             [["original_unitname", name],
                             ["readable_unitname", folder_name],
                             ["id", id]]
@@ -36,12 +46,12 @@ class BBUnit
 
         html = @session.doGet("webapps/blackboard/execute/announcement?method=search&context=course_entry&course_id=#{id}").body
         page = Nokogiri::HTML(html)
-
+        #TODO: Conflict detection for @listings entries ? (if contentid conflicts with toolid for example)
         page.css('ul#courseMenuPalette_contents li a').each do |listing|
 
             valid = false
             contentids = listing['href'].scan(/\&content_id=([-_0-9]+)\&/)
-            toolids = listing['href'].scan(/\&tool_id=([-_0-9]+)\&/)
+            toolids = listing['href'].scan(/\&tool_id=([-_0-9]+)/)
             unless contentids.empty?
                 CIO.puts "Discovered Listing -> #{listing.text}.... valid! (Content)"
                 contentid = contentids.last.first
@@ -52,26 +62,30 @@ class BBUnit
             unless toolids.empty?
                 CIO.puts "Discovered Listing -> #{listing.text}.... valid! (Tool)"
                 toolid = toolids.last.first
-                @listings[toolid] = BBContent.new(self, toolid, listing.text, "#{path}/#{folder_name}/ZZZ_BlackboardTools", CONTENT_TYPE::TOOL)
+                @listings[toolid] = BBContent.new(self, toolid, listing.text, "#{path}/#{folder_name}/#{BLACKBOARD_TOOLS_DIRNAME}", CONTENT_TYPE::TOOL)
                 valid = true
             end
 
             unless valid
-                CIO.puts "Discovered Listing -> #{listing.text}.... valid! (???)"
+                CIO.puts "Discovered Listing -> #{listing.text}.... INVALID (???)"
+            end
+        end
+
+        # Groups
+        page.css('ul#myGroups_contents>li').each do |group|
+            groupids = group['id'].scan(/([-_0-9]+)/)
+            unless groupids.empty?
+                CIO.puts "Discovered Listing -> #{group.text}.... valid! (Group)"
+                groupid = groupids.last.first
+                @listings[groupid] = BBContent.new(self, groupid, group.text, "#{path}/#{folder_name}/#{BLACKBOARD_GROUPS_DIRNAME}", CONTENT_TYPE::GROUP)
+            else
+                CIO.puts "Discovered Listing -> #{group.text}.... INVALID (???)"
             end
         end
         CIO.pop
         CIO.puts
         sleep($WAIT)
     end
-
-    # def getTools
-        
-    #     FileUtils.mkdir_p "#{unit_path}/#{folder_name}/ZZZ_BlackboardTools"
-    #     File.write("#{unit_path}/#{folder_name}/ZZZ_BlackboardTools/ZZZ_BlackboardPage.html", html)
-    #     pp @name
-    #     pp @tools
-    # end
 
     def crawl
         CIO.puts "Crawling resources for Units: #{to_s}..."

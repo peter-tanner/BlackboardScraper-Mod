@@ -5,6 +5,7 @@ require 'fileutils'
 require_relative 'utils.rb'
 require_relative 'unzip.rb'
 require_relative 'htmlunpack.rb'
+require_relative 'constants.rb'
 
 # EXTENSIONS = [
 #     /\.pdf$/, /\.docx$/, /\.txt$/, /\.c$/, /\.java$/, /\.class$/, /\.pptx$/, /\.ppt$/, /\.doc$/, /\.jar$/,
@@ -26,9 +27,6 @@ class BBAsset
         @name = name
         @path = path
         @regular_asset = false
-
-        @folder_metadata = "ZZZ_metadata"
-        @folder_archive = "ZZZ_archive"
     end
 
     def setRegularAsset state
@@ -64,15 +62,15 @@ class BBAsset
         filename = File.basename(URI.parse(url).path)
         hfilename = conv_filename(filename)
         filepath = "#{folder}/#{hfilename}"
-        metacsv_filepath = "#{folder}/#{@folder_metadata}/#{hfilename}__metadata.csv"
+        metacsv_filepath = "#{folder}/#{FILE_METADATA_DIRNAME}/#{hfilename}__metadata.csv"
 
         hfilename_archive = conv_filename(filename, true)
-        folder_archive = "#{folder}/#{@folder_archive}"
+        folder_archive = "#{folder}/#{ARCHIVE_METADATA_DIRNAME}"
         filepath_archive = "#{folder_archive}/#{hfilename_archive}"
-        metacsv_filepath_archive = "#{folder_archive}/#{@folder_metadata}/#{hfilename_archive}__metadata.csv"
+        metacsv_filepath_archive = "#{folder_archive}/#{FILE_METADATA_DIRNAME}/#{hfilename_archive}__metadata.csv"
         
-        FileUtils.mkdir_p "#{folder}/#{@folder_metadata}"
-        FileUtils.mkdir_p "#{folder_archive}/#{@folder_metadata}"
+        FileUtils.mkdir_p "#{folder}/#{FILE_METADATA_DIRNAME}"
+        FileUtils.mkdir_p "#{folder_archive}/#{FILE_METADATA_DIRNAME}"
 
         download = false
         if !File.exists?(filepath)

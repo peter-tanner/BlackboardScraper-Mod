@@ -4,9 +4,11 @@ require 'csv'
 require 'fileutils'
 
 require_relative 'asset.rb'
+require_relative 'group.rb'
 require_relative 'utils.rb'
 require_relative 'cio.rb'
 require_relative 'contenttypes.rb'
+require_relative 'constants.rb'
 
 class BBContent
     attr_accessor :id
@@ -46,6 +48,8 @@ class BBContent
             request = "webapps/blackboard/content/listContent.jsp?course_id=#{@unit.id}&content_id=#{id}&mode=reset"
         when CONTENT_TYPE::TOOL
             request = "webapps/blackboard/content/launchLink.jsp?course_id=#{@unit.id}&tool_id=#{id}&tool_type=TOOL&mode=view&mode=reset"
+        when CONTENT_TYPE::GROUP
+            request = "webapps/blackboard/execute/modulepage/viewGroup?course_id=#{unit.id}&group_id=#{id}"
         else
             raise "Error - invalid content type."
         end
@@ -58,14 +62,19 @@ class BBContent
         write_dir_metadata(
                             unit_path,
                             folder_name,
-                            "ZZZ_folder_metadata",
+                            FOLDER_METADATA_DIRNAME,
                             [["original_directoryname", name],
                             ["readable_directoryname", folder_name],
                             ["id", id]]
                           )
 
         FileUtils.mkdir_p "#{unit_path}/#{folder_name}"
-        File.write("#{unit_path}/#{folder_name}/ZZZ_BlackboardPage.html", html) # Need to add stuff to download assets from these pages.
+        File.write("#{unit_path}/#{folder_name}/#{BLACKBOARD_PAGE_FILE}", html) # TODO: Need to add stuff to download assets from these pages.
+
+        if @contentType == CONTENT_TYPE::GROUP
+            group = BBGroup.new(self)
+            group.downloadMembers("#{unit_path}/#{folder_name}/#{BLACKBOARD_GROUP_FILE}")
+        end
 
         page.css("ul#content_listContainer li div.item h3 a").select { |x| x['href'].start_with?("/webapps/blackboard/content") && !x['href'].include?("launchAssessment.jsp?") }.each do |listing|
             CIO.puts "-> Found Content: #{listing.text}"

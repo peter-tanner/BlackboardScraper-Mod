@@ -7,11 +7,9 @@ require_relative 'asset.rb'
 require_relative 'utils.rb'
 require_relative 'cio.rb'
 require_relative 'utils.rb'
+require_relative 'constants.rb'
 
 class HTMLUnpacker
-    
-    METADATA_PREFIX = 'ZZZ_metadata'
-    METADATA_SUFFIX = '__metadata.csv'
 
     def initialize session, filepath
         @filepath = filepath
