@@ -6,17 +6,17 @@ require "nokogiri"
 require_relative 'unit.rb'
 require_relative 'utils.rb'
 require_relative 'cio.rb'
+require_relative 'login.rb'
 
 class BBSession
-    require "base64"
 
     attr_accessor :units
     attr_accessor :http
 
-    def initialize usr, pwd
-        # @user = usr
-        # @pwd = Base64.encode64(pwd)
-        # @pwd_unicode = Base64.encode64(pwd.split("").product(["\x00"]).flatten.join("").force_encoding("US-ASCII")).strip
+    def initialize username, password
+        # @user = username
+        # @password = Base64.encode64(password)
+        # @pwd_unicode = Base64.encode64(password.split("").product(["\x00"]).flatten.join("").force_encoding("US-ASCII")).strip
 
         @loginPL = {
             # user_id: @user,
@@ -27,7 +27,7 @@ class BBSession
             new_loc: "",
             auth_type: "",
             one_time_token: "",
-            # encoded_pw: @pwd.strip,
+            # encoded_pw: @password.strip,
             # encoded_pw_unicode: @pwd_unicode
         }
         @cookies = {}
@@ -39,15 +39,18 @@ class BBSession
 
         @units = {}
 
-        pyargs = (usr.size > 0 ? " --username #{usr}" : "")+(pwd.size > 0 ? " --password #{pwd}" : "")
-        pwd = nil
-        usr = nil
-        cookie_string = `python3 login.py#{pyargs}`.strip
-        pyargs = nil
-        c = cookie_string.split('; ')
-        c.each{ |c|
-            @cookies[c.split('=')[0]] = c.split('=')[1]
-        }
+        # password = nil
+        # username = nil
+        # cookie_string = `python3 login.py#{pyargs}`.strip
+        # puts cookie_string
+        # pyargs = nil
+        # c = cookie_string.split('; ')
+        # c.each{ |c|
+        #     @cookies[c.split('=')[0]] = c.split('=')[1]
+        # }
+
+        mslogin = BBLogin.new
+        @cookies = mslogin.getCookie username, password
         if @cookies.length == 0
             puts 'Login error. Check your credentials. Exiting scraper.'
             exit -1

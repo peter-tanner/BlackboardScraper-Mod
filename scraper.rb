@@ -9,20 +9,23 @@ require 'io/console'
 require 'date'
 
 options = {}
-pass = ""
-user = ""
+password = nil
+username = nil
+$BASEPATH = "../blackboard"
 OptionParser.new do |opts|
     opts.banner = "Usage: scraper.rb [options]"
     # opts.on("-p", "--password=PASSWORD", "Automatically use provided password") do |v|
-    #     pass = v
+    #     password = v
     # end   # NOT SAFE DO NOT USE!! - shows in top, etc.
     opts.on("-u", "--username=USERNAME", "Automatically use provided userID") do |v|
-        user = v
+        username = v
+    end
+    opts.on("-p", "--path=PATH", "Path to download files to") do |v|
+        $BASEPATH = v
     end
 end.parse!
 
 # $BASEPATH = "/mnt/f/ARCHIVE/UNIVERSITY/bb" # this is the path I normally use.
-$BASEPATH = "../blackboard"
 $COLOR = true           # Print color to terminal
 $WAIT = 2               # To put less stress on the system.
 $PATHNAME_LEN = 40      # Int - how many characters from the original path to keep (Cuts the length of paths down to prevent files from being inaccesible on systems)
@@ -40,9 +43,17 @@ if !File.writable?($BASEPATH)
     end
 end
 
-session = BBSession.new user, pass
-user = nil
-pass = nil
+if username == nil
+    print "Username: "
+    username = gets.chomp
+end
+if password == nil
+    password = STDIN.getpass("Password: ")
+end
+
+session = BBSession.new username, password
+username = nil
+password = nil
 
 # Fetch Units
 CIO.puts
