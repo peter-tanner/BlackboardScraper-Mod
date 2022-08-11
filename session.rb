@@ -13,7 +13,7 @@ class BBSession
     attr_accessor :units
     attr_accessor :http
 
-    def initialize username, password
+    def initialize username, password, cookie_file
         # @user = username
         # @password = Base64.encode64(password)
         # @pwd_unicode = Base64.encode64(password.split("").product(["\x00"]).flatten.join("").force_encoding("US-ASCII")).strip
@@ -49,8 +49,12 @@ class BBSession
         #     @cookies[c.split('=')[0]] = c.split('=')[1]
         # }
 
-        mslogin = BBLogin.new
-        @cookies = mslogin.getCookie username, password
+        mslogin = BBLogin.new username, password, cookie_file
+        if cookie_file
+            @cookies = mslogin.tryCookie
+        else 
+            @cookies = mslogin.getCookie
+        end
         if @cookies.length == 0
             puts 'Login error. Check your credentials. Exiting scraper.'
             exit -1

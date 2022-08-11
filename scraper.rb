@@ -8,9 +8,13 @@ require 'fileutils'
 require 'io/console'
 require 'date'
 
+# DISABLE BUFFER SINCE THIS IS A CONSOLE APPLICATION.
+STDOUT.sync = true
+
 options = {}
 password = nil
 username = nil
+cookie_file = nil
 $BASEPATH = "../blackboard"
 OptionParser.new do |opts|
     opts.banner = "Usage: scraper.rb [options]"
@@ -22,6 +26,9 @@ OptionParser.new do |opts|
     end
     opts.on("-p", "--path=PATH", "Path to download files to") do |v|
         $BASEPATH = v
+    end
+    opts.on("-c", "--cookie_file=FILE", "Path to store cookie file at") do |v|
+        cookie_file = v
     end
 end.parse!
 
@@ -43,15 +50,7 @@ if !File.writable?($BASEPATH)
     end
 end
 
-if username == nil
-    print "Username: "
-    username = gets.chomp
-end
-if password == nil
-    password = STDIN.getpass("Password: ")
-end
-
-session = BBSession.new username, password
+session = BBSession.new username, password, cookie_file
 username = nil
 password = nil
 
