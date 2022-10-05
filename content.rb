@@ -64,9 +64,13 @@ class BBContent
                             unit_path,
                             folder_name,
                             FOLDER_METADATA_DIRNAME,
-                            [["original_directoryname", name],
-                            ["readable_directoryname", folder_name],
-                            ["id", id]]
+                            [
+                                ["original_directoryname", name],
+                                ["readable_directoryname", folder_name],
+                                ["id", id],
+                                ["content_type", contentType],
+                                ["path", path],
+                            ]
                           )
 
         FileUtils.mkdir_p "#{unit_path}/#{folder_name}"

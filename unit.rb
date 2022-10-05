@@ -39,9 +39,13 @@ class BBUnit
                             "#{$BASEPATH}/#{path}",
                             folder_name,
                             COURSE_METADATA_DIRNAME,
-                            [["original_unitname", name],
-                            ["readable_unitname", folder_name],
-                            ["id", id]]
+                            [
+                                ["original_directoryname", name],
+                                ["readable_directoryname", folder_name],
+                                ["id", id],
+                                ["content_type", CONTENT_TYPE::UNIT],
+                                ["path", path],
+                            ]
                           )
 
         html = @session.doGet("webapps/blackboard/execute/announcement?method=search&context=course_entry&course_id=#{id}").body
