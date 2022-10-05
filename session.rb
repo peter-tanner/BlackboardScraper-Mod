@@ -1,4 +1,5 @@
 require "net/http"
+require "resolv-replace"
 require "uri"
 require "base64"
 require "nokogiri"

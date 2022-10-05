@@ -22,8 +22,9 @@ class BBContent
     @@contentids = []
     
     SELECTORS = [
-        ["div.details * *[href]",   "href"],
-        ["div.details * img[src]",  "src"]
+        ["div.details * *[href]",       "href"],
+        ["div.details * img[src]",      "src"],
+        ["div.details * video[src]",    "src"],
     ]
 
     def initialize unit, id, name, path, contentType=CONTENT_TYPE::CONTENT

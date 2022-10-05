@@ -7,7 +7,7 @@ class BBLogin
     def initialize username, password, cookie_file
         @cookie_file = cookie_file
         @username = username
-        # @password = password
+
         options = Selenium::WebDriver::Chrome::Options.new
         # options.add_argument("--headless"); #open Browser in maximized mode
 
@@ -62,11 +62,13 @@ class BBLogin
             print "Username: "
             # REGEX TO REMOVE BRACKETED PASTE MODE CHARACTERS.
             @username = gets.chomp.sub(/^\e\[200~/,'').sub(/\e\[201~$/,'')
+            print "\n"
         end
-        # if password == nil
-        password = STDIN.getpass("\nPassword: ").sub(/^\e\[200~/,'').sub(/\e\[201~$/,'')
-        # end
-        
+
+        print "Password: "
+        password = STDIN.getpass().sub(/^\e\[200~/,'').sub(/\e\[201~$/,'')
+        print "\n"
+
         # begin
         clickElement(ID_BOX_USERNAME).send_keys(@username+"@student.uwa.edu.au").perform
         clickElement(ID_BUTTON_NEXT).perform

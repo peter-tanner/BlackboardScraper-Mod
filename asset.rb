@@ -107,6 +107,8 @@ class BBAsset
                 ["last-modified",       head_cdn["last-modified"]],
                 ["content-length",      head_cdn["content-length"]],
                 ["age",                 head_cdn["age"]],
+                ["path",                path],
+                ["title",               name],
             ]
 
             File.open(metacsv_filepath, 'wb') do |f|
@@ -145,7 +147,7 @@ class BBAsset
     end
 
     def to_s
-        "#{path}/#{name} (#{@pathhash})"
+        "#{path}/#{name} (#{@pathhash}) [#{hfilename}]"
     end
 
     def conv_filename filename, etag = false
