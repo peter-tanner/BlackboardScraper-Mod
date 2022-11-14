@@ -21,10 +21,15 @@ class BBContent
 
     @@contentids = []
     
-    SELECTORS = [
+    CONTENT_SELECTORS = [
         ["div.details * *[href]",       "href"],
         ["div.details * img[src]",      "src"],
         ["div.details * video[src]",    "src"],
+    ]
+    BLANK_PAGE_SELECTORS = [
+        ["* *[href]",       "href"],
+        ["* img[src]",      "src"],
+        ["* video[src]",    "src"],
     ]
 
     def initialize unit, id, name, path, contentType=CONTENT_TYPE::CONTENT
@@ -45,6 +50,8 @@ class BBContent
 
         request = ""
         case @contentType
+        when CONTENT_TYPE::BLANK_PAGE
+            request = "webapps/blackboard/execute/content/blankPage?cmd=view&course_id=#{@unit.id}&content_id=#{id}&mode=reset"
         when CONTENT_TYPE::CONTENT
             request = "webapps/blackboard/content/listContent.jsp?course_id=#{@unit.id}&content_id=#{id}&mode=reset"
         when CONTENT_TYPE::TOOL
@@ -80,14 +87,20 @@ class BBContent
             group = BBGroup.new(self)
             group.downloadMembers("#{unit_path}/#{folder_name}/#{BLACKBOARD_GROUP_FILE}")
         end
-
+        
         page.css("ul#content_listContainer li div.item h3 a").select { |x| x['href'].start_with?("/webapps/blackboard/content") && !x['href'].include?("launchAssessment.jsp?") }.each do |listing|
             CIO.puts "-> Found Content: #{listing.text}"
             # CIO.puts "#{listing}"
             CIO.push            
             contentid = listing['href'].scan(/\&content_id=([-_0-9]+)/).last.first
+            
+            type = CONTENT_TYPE::CONTENT
+            if listing['href'].include? "blankPage"
+                type = CONTENT_TYPE::BLANK_PAGE
+            end
+            
             unless contentid == @id || @@contentids.include?(contentid)
-                @contents[contentid] = BBContent.new(unit, contentid, listing.text, "#{path}/#{folder_name}")
+                @contents[contentid] = BBContent.new(unit, contentid, listing.text, "#{path}/#{folder_name}", type)
                 @@contentids << contentid
                 @contents[contentid].crawl
             else
@@ -95,7 +108,7 @@ class BBContent
             end
             CIO.pop
         end
-
+        
         page.css("ul#content_listContainer li").each do |section|
             h3 = section.css("div.item h3")
             unless h3.empty?
@@ -103,29 +116,42 @@ class BBContent
                 # section.css("div.details div div ul.attachments li a")
                 #     .select { |x| x['href'].start_with?("/bbcswebdav") }
                 #     .each { |asset| addAsset(asset["href"], asset.text, sectionName) }    #Redundant because of the last expression.
-
+                
                 # Leads to another subfolder
                 section.css("div.item h3 a")
-                    .select { |x| x['href'].start_with?("/bbcswebdav") }
-                    .each { |asset| addAsset(asset["href"], asset.text, sectionName) }
-
+                .select { |x| x['href'].start_with?("/bbcswebdav") }
+                .each { |asset| addAsset(asset["href"], asset.text, sectionName) }
+                
                 # I initially thought that this was bugged because this little block caused the files to be put into their own directory without a valid ID
                 # But turns out the items are actually not inside of the folder (when you click on the folder with the content_id link, it says "There is no content to display.")
                 # Instead, the items are placed in the description of the folder. So the scraper treats it as the same page (and not inside of the folder).
                 # Basically don't be alarmed if you see some items under folders that don't have a [content_id] on the end.
-                for selector in SELECTORS do
+                for selector in CONTENT_SELECTORS do
                     attribute = selector[1]
                     section.css(selector[0])
-                        .select { |x| x[attribute].include?("/bbcswebdav") }
-                        .each { |asset| 
-                            # pp asset
-                            asset[attribute] = asset[attribute].sub(/^.*\/bbcswebdav/,'/bbcswebdav')
-                            addAsset(asset[attribute], asset.text, sectionName) 
-                        }
+                    .select { |x| x[attribute].include?("/bbcswebdav") }
+                    .each { |asset| 
+                        asset[attribute] = asset[attribute].sub(/^.*\/bbcswebdav/,'/bbcswebdav')
+                        addAsset(asset[attribute], asset.text, sectionName) 
+                    }
                 end
             end
         end
-
+        
+        # It is too hard to scan a blank page since the user can define what ever structure they want for it. Just pick every href that starts with /bbcswebdav
+        if @contentType == CONTENT_TYPE::BLANK_PAGE
+            page.css("div#containerdiv.container.clearfix").each do |section|
+                for selector in BLANK_PAGE_SELECTORS do
+                    attribute = selector[1]
+                    section.css(selector[0])
+                    .select { |x| x[attribute].include?("/bbcswebdav") }
+                    .each { |asset| 
+                        asset[attribute] = asset[attribute].sub(/^.*\/bbcswebdav/,'/bbcswebdav')
+                        addAsset(asset[attribute], asset.text, "NULL_SECTION") 
+                    }
+                end
+            end
+        end
         CIO.pop
     end
 

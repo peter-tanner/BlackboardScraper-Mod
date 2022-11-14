@@ -147,7 +147,7 @@ class BBAsset
     end
 
     def to_s
-        "#{path}/#{name} (#{@pathhash}) [#{hfilename}]"
+        "#{path}/#{name} (#{@pathhash})"
     end
 
     def conv_filename filename, etag = false

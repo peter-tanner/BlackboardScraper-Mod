@@ -91,19 +91,28 @@ end
 # Download Assets
 downloaded = []
 
-CIO.puts
-CIO.puts colorize("Downloading Assets...","\e[1;33m")
-CIO.with do 
-    assets = session.units.values.map(&:collectAssets).map(&:values).flatten
-    asset_count = assets.size
-    assets.each_with_index do |asset, i|
-        CIO.puts colorize("Downloading asset (#{i+1}/#{asset_count}): #{asset.to_s}", "\e[36m")
-        response = asset.download $BASEPATH
-        if response.length > 0
-            downloaded.append(response)
+ERROR_LIST = [
+    Errno::EINVAL, Errno::ECONNRESET, EOFError,
+    Net::HTTPBadResponse, Net::HTTPHeaderSyntaxError, Net::ProtocolError
+]
+
+begin
+    CIO.puts
+    CIO.puts colorize("Downloading Assets...","\e[1;33m")
+    CIO.with do 
+        assets = session.units.values.map(&:collectAssets).map(&:values).flatten
+        asset_count = assets.size
+        assets.each_with_index do |asset, i|
+            CIO.puts colorize("Downloading asset (#{i+1}/#{asset_count}): #{asset.to_s}", "\e[36m")
+            response = asset.download $BASEPATH
+            if response.length > 0
+                downloaded.append(response)
+            end
+            sleep($WAIT)
         end
-        sleep($WAIT)
     end
+rescue *ERROR_LIST => e
+    CIO.puts "HTTP ERROR #{e}. Stop download."
 end
 
 CIO.puts "FINISHED DOWNLOADING ITEMS!"
