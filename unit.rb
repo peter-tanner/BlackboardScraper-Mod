@@ -48,6 +48,12 @@ class BBUnit
                             ]
                           )
 
+        # Grades
+        if $GRADES
+            @listings[BLACKBOARD_TOOL_ID_GRADES] = BBContent.new(self, BLACKBOARD_TOOL_ID_GRADES, BLACKBOARD_GRADES_DIRNAME, "#{path}/#{folder_name}/#{BLACKBOARD_GRADES_DIRNAME}", CONTENT_TYPE::GRADES)
+        end
+
+        # Content
         html = @session.doGet("webapps/blackboard/execute/announcement?method=search&context=course_entry&course_id=#{id}").body
         page = Nokogiri::HTML(html)
         #TODO: Conflict detection for @listings entries ? (if contentid conflicts with toolid for example)

@@ -2,6 +2,8 @@ require 'digest'
 require 'pp'
 require 'csv'
 require 'fileutils'
+require 'cgi'
+require 'json'
 
 require_relative 'asset.rb'
 require_relative 'group.rb'
@@ -32,37 +34,52 @@ class BBContent
         ["* video[src]",    "src"],
     ]
 
-    def initialize unit, id, name, path, contentType=CONTENT_TYPE::CONTENT
+    def initialize unit, id, name, path, contentType=CONTENT_TYPE::CONTENT, request=nil
         @unit = unit
         @id = id
         @name = name
         @path = path
         @contentType = contentType
+        @request = request
 
         @contents = {}
         @assets = {}
     end
+
+    def addContent unit, contentid, listing_text, content_path, content_type, request=nil
+        unless contentid == @id || @@contentids.include?(contentid)
+            @contents[contentid] = BBContent.new(unit, contentid, listing_text, content_path, content_type, request)
+            @@contentids << contentid
+            @contents[contentid].crawl
+        else
+            CIO.puts "[ content not added (recursive) ]"
+        end
+    end
+
 
     def crawl
         sleep($WAIT)
         CIO.puts "Crawling Content: #{to_s}"
         CIO.push
 
-        request = ""
-        case @contentType
-        when CONTENT_TYPE::BLANK_PAGE
-            request = "webapps/blackboard/execute/content/blankPage?cmd=view&course_id=#{@unit.id}&content_id=#{id}&mode=reset"
-        when CONTENT_TYPE::CONTENT
-            request = "webapps/blackboard/content/listContent.jsp?course_id=#{@unit.id}&content_id=#{id}&mode=reset"
-        when CONTENT_TYPE::TOOL
-            request = "webapps/blackboard/content/launchLink.jsp?course_id=#{@unit.id}&tool_id=#{id}&tool_type=TOOL&mode=view&mode=reset"
-        when CONTENT_TYPE::GROUP
-            request = "webapps/blackboard/execute/modulepage/viewGroup?course_id=#{unit.id}&group_id=#{id}"
-        else
-            raise "Error - invalid content type."
+        if @request == nil
+            case @contentType
+            when CONTENT_TYPE::BLANK_PAGE
+                @request = "webapps/blackboard/execute/content/blankPage?cmd=view&course_id=#{@unit.id}&content_id=#{id}&mode=reset"
+            when CONTENT_TYPE::CONTENT
+                @request = "webapps/blackboard/content/listContent.jsp?course_id=#{@unit.id}&content_id=#{id}&mode=reset"
+            when CONTENT_TYPE::TOOL
+                @request = "webapps/blackboard/content/launchLink.jsp?course_id=#{@unit.id}&tool_id=#{id}&tool_type=TOOL&mode=view&mode=reset"
+            when CONTENT_TYPE::GRADES
+                @request = "webapps/blackboard/content/launchLink.jsp?course_id=#{@unit.id}&tool_id=#{BLACKBOARD_TOOL_ID_GRADES}&tool_type=TOOL&mode=view&mode=reset"
+            when CONTENT_TYPE::GROUP
+                @request = "webapps/blackboard/execute/modulepage/viewGroup?course_id=#{unit.id}&group_id=#{id}"
+            else
+                raise "Error - invalid content type."
+            end
         end
 
-        html = @unit.session.doGet(request).body
+        html = @unit.session.doGet(@request).body
         page = Nokogiri::HTML(html)
 
         unit_path = "#{$BASEPATH}/#{path}"
@@ -82,11 +99,82 @@ class BBContent
 
         FileUtils.mkdir_p "#{unit_path}/#{folder_name}"
         File.write("#{unit_path}/#{folder_name}/#{BLACKBOARD_PAGE_FILE}", html) # TODO: Need to add stuff to download assets from these pages.
-
-        if @contentType == CONTENT_TYPE::GROUP
+        
+        case @contentType
+        when CONTENT_TYPE::GROUP
             group = BBGroup.new(self)
             group.downloadMembers("#{unit_path}/#{folder_name}/#{BLACKBOARD_GROUP_FILE}")
+        when CONTENT_TYPE::GRADES
+            page.css("a[onclick]").each do |listing|
+                onclick_action = listing['onclick']
+                if onclick_action.include?("/webapps")
+                    link = onclick_action.match(/loadContentFrame\('(.*)'\)/)[1]
+                    parameters = CGI.parse(URI.parse(link).query)
+                    if link.include?("/webapps/assignment/uploadAssignment") && parameters['action'].first == "showHistory"
+                        addContent(unit, parameters['outcome_id'].first, listing.text, "#{path}/#{folder_name}", CONTENT_TYPE::UPLOAD_ASSIGNMENT, link)
+                    elsif link.include?("/webapps/gradebook/do/student/viewAttempts")
+                        addContent(unit, parameters['outcome_id'].first, listing.text, "#{path}/#{folder_name}", CONTENT_TYPE::VIEW_ATTEMPTS, link)
+                    end
+                end
+            end
+        when CONTENT_TYPE::VIEW_ATTEMPTS
+            page.css("div#containerdiv.container.clearfix a[href]").each do |attempt|
+                link = attempt['href']
+                if link.include?("/webapps/assessment/review/review.jsp")
+                    parameters = CGI.parse(URI.parse(link).query)
+                    addContent(unit, parameters['attempt_id'].first, "ATTEMPT_#{parameters['attempt_id'].first}", "#{path}/#{folder_name}", CONTENT_TYPE::REVIEW_ATTEMPT, link)
+                end
+            end
+        when CONTENT_TYPE::BLANK_PAGE, CONTENT_TYPE::UPLOAD_ASSIGNMENT, CONTENT_TYPE::REVIEW_ATTEMPT
+            # It is too hard to scan a blank page since the user can define what ever structure they want for it. Just pick every href that starts with /bbcswebdav
+            page.css("div#containerdiv.container.clearfix").each do |section|
+                for selector in BLANK_PAGE_SELECTORS do
+                    attribute = selector[1]
+                    section.css(selector[0])
+                    .select { |x| x[attribute].include?("/bbcswebdav") }
+                    .each { |asset| 
+                        asset[attribute] = asset[attribute].sub(/^.*\/bbcswebdav/,'/bbcswebdav')
+                        addAsset(asset[attribute], asset.text, "NULL_SECTION") 
+                    }
+                end
+            end
         end
+
+        if @contentType == CONTENT_TYPE::UPLOAD_ASSIGNMENT
+            # GET SUBMITTED FILES
+            page.css("div#containerdiv.container.clearfix a[href]").each do |attempt|
+                link = attempt['href']
+                if link.include?("/webapps/assignment/download")
+                    # ?course_id=_67971_1&attempt_id=_11878820_1&file_id=_3554419_1&fileName=red_training.bin
+                    parameters = CGI.parse(URI.parse(link).query)
+                    addAsset(link, parameters["fileName"].first, "SUBMITTED", true) 
+                end
+            end
+            
+            # GET FEEDBACK FILES
+            page.css("body script").each do |script|
+                if script.text.include?("gradeAssignment.init")
+                    file_request = script.text.match(/gradeAssignment.init\(.*[,][ ]{0,}'(.*)'\)/)
+                    if file_request.length > 1 && file_request[1].length > 0
+                        file_request_json = JSON.parse(file_request[1])
+                        if file_request_json["status"] != "UNSUPPORTED"
+                            uuid = file_request_json['viewUuid'].sub(/--bav--/,"")
+                            ticket = CGI.parse(URI.parse(file_request_json['viewUrl']).query)['ticket'][0]
+                            jwt = @unit.session.doPost("https://annotate-ecs-au.foundations.blackboard.com/api/v1/pdfviewer/tickets",
+                                                    {}, JSON.dump({"ticket"=>ticket}), "application/json").body
+                            jwt = JSON.parse(jwt)["jwt"]
+                            url = "https://annotate-ecs-au.foundations.blackboard.com/documents/#{uuid}/pdf?jwt=#{jwt}"
+                            addAsset(url, file_request_json["fileName"], "FEEDBACK", true, uuid) 
+                        else
+                            CIO.puts "-> Unsupported feedback file #{file_request_json["fileName"]}."
+                        end
+                    else
+                        CIO.puts "-> No feedback found."
+                    end
+                end
+            end
+        end
+
         
         page.css("ul#content_listContainer li div.item h3 a").select { |x| x['href'].start_with?("/webapps/blackboard/content") && !x['href'].include?("launchAssessment.jsp?") }.each do |listing|
             CIO.puts "-> Found Content: #{listing.text}"
@@ -99,13 +187,7 @@ class BBContent
                 type = CONTENT_TYPE::BLANK_PAGE
             end
             
-            unless contentid == @id || @@contentids.include?(contentid)
-                @contents[contentid] = BBContent.new(unit, contentid, listing.text, "#{path}/#{folder_name}", type)
-                @@contentids << contentid
-                @contents[contentid].crawl
-            else
-                CIO.puts "[ content not added (recursive) ]"
-            end
+            addContent(unit, contentid, listing.text, "#{path}/#{folder_name}", type)
             CIO.pop
         end
         
@@ -137,33 +219,18 @@ class BBContent
                 end
             end
         end
-        
-        # It is too hard to scan a blank page since the user can define what ever structure they want for it. Just pick every href that starts with /bbcswebdav
-        if @contentType == CONTENT_TYPE::BLANK_PAGE
-            page.css("div#containerdiv.container.clearfix").each do |section|
-                for selector in BLANK_PAGE_SELECTORS do
-                    attribute = selector[1]
-                    section.css(selector[0])
-                    .select { |x| x[attribute].include?("/bbcswebdav") }
-                    .each { |asset| 
-                        asset[attribute] = asset[attribute].sub(/^.*\/bbcswebdav/,'/bbcswebdav')
-                        addAsset(asset[attribute], asset.text, "NULL_SECTION") 
-                    }
-                end
-            end
-        end
         CIO.pop
     end
 
-    def addAsset link, text, sectionName
+    def addAsset link, text, sectionName, feedback_asset = false, feedback_id = nil
         if text.empty?
             text = "NULL"
         end
         title = text.strip
         CIO.puts "-> Found Asset: #{text} in #{sectionName}"
         title = sectionName + "_" + title if title != sectionName
-        hash = Digest::MD5.hexdigest link
-        @assets[hash] = BBAsset.new(@unit.session, hash, link, title, "#{path}/#{path_name(name, id)}/#{sectionName}")
+        hash = feedback_id ? Digest::MD5.hexdigest(feedback_id) : Digest::MD5.hexdigest(link)
+        @assets[hash] = BBAsset.new(@unit.session, hash, link, title, "#{path}/#{path_name(name, id)}/#{sectionName}", feedback_asset)
     end
 
     def collectAssets

@@ -16,6 +16,7 @@ password = nil
 username = nil
 cookie_file = nil
 $BASEPATH = "../blackboard"
+$GRADES = false
 OptionParser.new do |opts|
     opts.banner = "Usage: scraper.rb [options]"
     # opts.on("-p", "--password=PASSWORD", "Automatically use provided password") do |v|
@@ -30,6 +31,9 @@ OptionParser.new do |opts|
     opts.on("-c", "--cookie_file=FILE", "Path to store cookie file at") do |v|
         cookie_file = v
     end
+    opts.on("-g", "--grades", "Download assessment and grade files") do |v|
+        $GRADES = v
+    end
 end.parse!
 
 # $BASEPATH = "/mnt/f/ARCHIVE/UNIVERSITY/bb" # this is the path I normally use.
@@ -40,6 +44,8 @@ $PATHNAME_HASH_LEN = 3
 $FILENAME_LEN = -1      # -1 => unlimited length
 $FILENAME_HASH_LEN = 5  # Int - how much of the file's hash to append on the end? Needed because files with the same name (but different content) can be downloaded.
                         # If 0, there's a risk that only one out of two or more files with the same filename but different content will be downloaded.
+puts $GRADES
+exit 0
 
 if !File.writable?($BASEPATH)
     if FileUtils.mkdir_p $BASEPATH
@@ -82,11 +88,6 @@ CIO.with do
         end
     end
 end
-
-#debug
-# CIO.puts
-# session.units.values.each(&:getTools)
-# exit -1
 
 # Download Assets
 downloaded = []

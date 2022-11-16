@@ -62,23 +62,36 @@ class BBSession
         end
     end
 
-    def doPost path, payload
-        uri = makeURI(path)
+    def doPost path, payload, raw_data=nil, content_type=nil
+        uri = URI.parse(path)
+        if !(["http", "https"].include?(uri.scheme))
+            uri = makeURI(path)
+        end
+        http_ = Net::HTTP.new(uri.host, uri.port)
+        http_.use_ssl = true
+        
         req = Net::HTTP::Post.new(uri.request_uri)
         req.set_form_data payload 
         req["Content-Length"] = req.body.length
         req["Cookie"] = @cookies.map { |k,v| "#{k}=#{v}" }.join(";")
         req['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
+        if raw_data
+            req.body = raw_data
+        end
+        if content_type
+            req.content_type = content_type 
+        end
 
-        res = @http.request req
+        res = http_.request req
         cookies = res.get_fields('set-cookie')
-        cookies.each { |cookie|
-            c = cookie.split(';')[0]
-            @cookies[c.split('=')[0]] = c.split('=')[1]
-        }
+        if cookies
+            cookies.each { |cookie|
+                c = cookie.split(';')[0]
+                @cookies[c.split('=')[0]] = c.split('=')[1]
+            }
+        end
         res
     end
-
 
     def doRequest path, redirects = true, mode="get"
         uri = URI.parse(path)

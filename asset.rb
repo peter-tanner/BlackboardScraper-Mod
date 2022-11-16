@@ -19,7 +19,7 @@ class BBAsset
     attr_accessor :name
     attr_accessor :path
 
-    def initialize session, pathhash, url, name, path
+    def initialize session, pathhash, url, name, path, override_name=false
         @session = session
         @pathhash = pathhash
         @hash = ""
@@ -27,6 +27,7 @@ class BBAsset
         @name = name
         @path = path
         @regular_asset = false
+        @override_name = override_name
     end
 
     def setRegularAsset state
@@ -36,6 +37,13 @@ class BBAsset
     def fqp
         # "#{path}/#{friendly_filename(name)}_#{hash[0..6]}"
         "#{path}"
+    end
+
+    def get_file_path
+        # override_name for annotated submissions
+        filename = @override_name ? @name : File.basename(URI.parse(@url).path)
+        hfilename = conv_filename(filename)
+        filepath = "#{fqp}/#{hfilename}"
     end
 
     def download basepath, hidden_filename = true
@@ -56,10 +64,11 @@ class BBAsset
             CIO.puts colorize("-> Error "+head_cdn, "\e[31m")
             return {}
         end
-        etag = head_cdn['etag'].undump
+        # Fall-back to content-length when etag does not exist (such as in annotated submissions)
+        etag = head_cdn['etag'] ? head_cdn['etag'].undump : head_cdn['content-length']
         @hash = Digest::MD5.hexdigest etag
-        
-        filename = File.basename(URI.parse(url).path)
+        # override_name for annotated submissions
+        filename = @override_name ? @name : File.basename(URI.parse(url).path)
         hfilename = conv_filename(filename)
         filepath = "#{folder}/#{hfilename}"
         metacsv_filepath = "#{folder}/#{FILE_METADATA_DIRNAME}/#{hfilename}__metadata.csv"
@@ -109,6 +118,7 @@ class BBAsset
                 ["age",                 head_cdn["age"]],
                 ["path",                path],
                 ["title",               name],
+                ["overrride_name",      @override_name]
             ]
 
             File.open(metacsv_filepath, 'wb') do |f|
