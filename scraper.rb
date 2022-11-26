@@ -44,8 +44,6 @@ $PATHNAME_HASH_LEN = 3
 $FILENAME_LEN = -1      # -1 => unlimited length
 $FILENAME_HASH_LEN = 5  # Int - how much of the file's hash to append on the end? Needed because files with the same name (but different content) can be downloaded.
                         # If 0, there's a risk that only one out of two or more files with the same filename but different content will be downloaded.
-puts $GRADES
-exit 0
 
 if !File.writable?($BASEPATH)
     if FileUtils.mkdir_p $BASEPATH
