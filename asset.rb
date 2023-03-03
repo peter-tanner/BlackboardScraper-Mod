@@ -77,7 +77,7 @@ class BBAsset
         folder_archive = "#{folder}/#{ARCHIVE_METADATA_DIRNAME}"
         filepath_archive = "#{folder_archive}/#{hfilename_archive}"
         metacsv_filepath_archive = "#{folder_archive}/#{FILE_METADATA_DIRNAME}/#{hfilename_archive}__metadata.csv"
-        
+
         FileUtils.mkdir_p "#{folder}/#{FILE_METADATA_DIRNAME}"
         FileUtils.mkdir_p "#{folder_archive}/#{FILE_METADATA_DIRNAME}"
 
@@ -92,15 +92,21 @@ class BBAsset
                     download = true
                 end
             else
-               download = true 
+               download = true
             end
         end
 
         if download
             # validext = !EXTENSIONS.reject { |x| filename.scan(x).empty? }.empty?
             # if validext
-            File.open(filepath, 'wb') do |f|
-                f.write @session.doGet(url).body
+            
+            data = @session.doGet(url).body
+            if NO_WRITE
+                CIO.puts "Skip write to file - NO_WRITE=true"
+            else
+                File.open(filepath, 'wb') do |f|
+                    f.write data
+                end
             end
             FileUtils.cp(filepath, filepath_archive)
 
@@ -152,21 +158,21 @@ class BBAsset
                 response = {}
             end
         end
-        
+
         return response
     end
 
     def to_s
-        "#{path}/#{name} (#{@pathhash})"
+        "#{path}/#{name} (hash=\"#{@pathhash}\", url=\"#{url}\")"
     end
 
     def conv_filename filename, etag = false
         filename = CGI.unescape(filename)
         ffilename_arr = friendly_filename(filename,$FILENAME_LEN).split(".")
         if $FILENAME_HASH_LEN > 0
-            if etag 
+            if etag
                 if ffilename_arr.length > 1
-                    then "#{ffilename_arr[0..-2].join(".")}[#{@pathhash[0..$FILENAME_HASH_LEN]},#{@hash[0..$FILENAME_HASH_LEN]}].#{ffilename_arr[-1]}" 
+                    then "#{ffilename_arr[0..-2].join(".")}[#{@pathhash[0..$FILENAME_HASH_LEN]},#{@hash[0..$FILENAME_HASH_LEN]}].#{ffilename_arr[-1]}"
                     else "#{ffilename_arr[0]}[#{@pathhash[0..$FILENAME_HASH_LEN]},#{@hash[0..$FILENAME_HASH_LEN]}]"
                 end
             else

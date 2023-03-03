@@ -8,6 +8,7 @@ require_relative 'unit.rb'
 require_relative 'utils.rb'
 require_relative 'cio.rb'
 require_relative 'login.rb'
+require_relative 'constants.rb'
 
 class BBSession
 
@@ -34,9 +35,9 @@ class BBSession
         @cookies = {}
 
         @baseurl = "https://lms.uwa.edu.au"
+        @trusted_domain = "uwa.edu.au"
         @uri = URI.parse(@baseurl)
         @http = Net::HTTP.new(@uri.host, @uri.port)
-        @http.use_ssl = true
 
         @units = {}
 
@@ -62,19 +63,28 @@ class BBSession
         end
     end
 
+    def set_request req, uri
+        # FIXME: FACILITATE HTTP CONNECTIONS WHICH DON'T USE SSL
+        if uri.host[-@trusted_domain.length..] == @trusted_domain
+            req["Cookie"] = @cookies.map { |k,v| "#{k}=#{v}" }.join(";")
+        else
+            req["Cookie"] = ""
+        end
+        req['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
+    end
+
     def doPost path, payload, raw_data=nil, content_type=nil
         uri = URI.parse(path)
         if !(["http", "https"].include?(uri.scheme))
             uri = makeURI(path)
         end
         http_ = Net::HTTP.new(uri.host, uri.port)
-        http_.use_ssl = true
+        http_.use_ssl = uri.scheme == 'https'
         
         req = Net::HTTP::Post.new(uri.request_uri)
         req.set_form_data payload 
         req["Content-Length"] = req.body.length
-        req["Cookie"] = @cookies.map { |k,v| "#{k}=#{v}" }.join(";")
-        req['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
+        set_request(req, uri)
         if raw_data
             req.body = raw_data
         end
@@ -97,20 +107,18 @@ class BBSession
         uri = URI.parse(path)
         if ["http", "https"].include?(uri.scheme)
             http_ = Net::HTTP.new(uri.host, uri.port)
-            http_.use_ssl = true
         else
             uri = makeURI(path)
             http_ = @http
         end
         http_ = Net::HTTP.new(uri.host, uri.port)
-        http_.use_ssl = true
+        http_.use_ssl = uri.scheme == 'https'
 
         req = case mode
             when "get"  then Net::HTTP::Get.new(uri.request_uri)
             when "head" then Net::HTTP::Head.new(uri.request_uri)
         end
-        req["Cookie"] = @cookies.map { |k,v| "#{k}=#{v}" }.join(";")
-        req['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
+        set_request(req, uri)
         resp = http_.request req
         if redirects && resp.code == "302" && !resp['location'].empty?
             doRequest(resp['location'], true, mode)   # This is because blackboard serves the file over CDN. The webdav link redirects to a generated CDN link.
@@ -153,8 +161,13 @@ class BBSession
             unless tmp.empty?
                 courseid = tmp.last.first
                 course = el.text
-                CIO.puts "Found Unit -> #{courseid} (#{course})"
-                [courseid, BBUnit.new(self, courseid, course, "")]
+                []
+                if COURSE_FILTER == nil || COURSE_FILTER.include?(courseid)
+                    CIO.puts "Found Unit -> #{courseid} (#{course})"
+                    [courseid, BBUnit.new(self, courseid, course, "")]
+                else
+                    [0,0]
+                end
             else
                 [0,0]
             end

@@ -74,7 +74,7 @@ class HTMLUnpacker
         for asset in @assets do
             i += 1
             CIO.puts colorize("Downloading asset (#{i}/#{asset_count}): #{asset[1].to_s}", "\e[36m")
-            response = asset[1].download "."
+            response = asset[1].download $BASEPATH
             if response.length > 0
                 content.append(asset[1].name)
             end

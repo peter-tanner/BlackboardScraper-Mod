@@ -9,7 +9,13 @@ class BBLogin
         @username = username
 
         options = Selenium::WebDriver::Chrome::Options.new
-        # options.add_argument("--headless"); #open Browser in maximized mode
+        # options.add_argument('--no-sandbox')
+
+        # NOTE: REQUIRED FOR DEBUGGING
+        options.add_argument("--headless"); #open Browser in maximized mode
+        # if DEBUG
+        #     options.add_argument("--headless"); #open Browser in maximized mode
+        # end
 
         @driver = Selenium::WebDriver.for :chrome, options: options
         @wait = Selenium::WebDriver::Wait.new(:timeout => 15)
@@ -22,6 +28,10 @@ class BBLogin
     ID_BUTTON_NEXT   = "idSIButton9"
     ID_BUTTON_DENY   = "idBtn_Back"
 
+    TARGET_URL = 'https://lms.uwa.edu.au/ultra'
+    LOGIN_ENTRYPOINT_URL = 'https://lms.uwa.edu.au/auth-saml/saml/'
+    SUCC_URL = 'lms.uwa.edu.au'
+
     def tryCookie        
         cookies = nil
         begin
@@ -29,20 +39,20 @@ class BBLogin
         rescue
             puts 'Could not read cookie file.'
             puts 'Trying normal login.'
-            @driver.get('https://lms.uwa.edu.au/ultra')
+            @driver.get(TARGET_URL)
             return tryMSlogin()
         end
         
-        @driver.get('https://lms.uwa.edu.au/auth-saml/saml/') # Page which does not redirect to MS login.
+        @driver.get(LOGIN_ENTRYPOINT_URL) # Page which does not redirect to MS login.
         
         cookies = YAML.load(cookies)
         for cookie in cookies do
             @driver.manage.add_cookie(cookie)
         end
-        @driver.get('https://lms.uwa.edu.au/ultra')
+        @driver.get(TARGET_URL)
                 
         begin
-            @wait.until{@driver.current_url.include?('lms.uwa.edu.au')}
+            @wait.until{@driver.current_url.include?(SUCC_URL)}
             writeCookieFile()
             return reformatCookie()
         rescue
@@ -53,7 +63,7 @@ class BBLogin
     end
 
     def getCookie
-        @driver.get('https://lms.uwa.edu.au/ultra')
+        @driver.get(TARGET_URL)
         return tryMSlogin()
     end
 
@@ -90,7 +100,7 @@ class BBLogin
         # clickElement(BUTTON_NEXT).perform # IF you want to remember credentials, switch these comments
         
         begin
-            @wait.until{@driver.current_url.include?('lms.uwa.edu.au')}
+            @wait.until{@driver.current_url.include?(SUCC_URL)}
         rescue
             puts 'Could not get auth cookie - Invalid ID or password?'
             @driver.quit

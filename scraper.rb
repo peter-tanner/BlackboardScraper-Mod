@@ -11,6 +11,9 @@ require 'date'
 # DISABLE BUFFER SINCE THIS IS A CONSOLE APPLICATION.
 STDOUT.sync = true
 
+script_dir = File.expand_path(__dir__)
+CIO.puts "Blackboard scraper (Revision #{`git -C '#{script_dir}' rev-parse HEAD`.strip}) #{`git -C '#{script_dir}' status --porcelain`.strip.empty?() ? "" : "[DEV MODE]"}"
+
 options = {}
 password = nil
 username = nil
@@ -112,6 +115,8 @@ begin
     end
 rescue *ERROR_LIST => e
     CIO.puts "HTTP ERROR #{e}. Stop download."
+# rescue StandardError => e
+#     CIO.puts e
 end
 
 CIO.puts "FINISHED DOWNLOADING ITEMS!"

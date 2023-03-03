@@ -22,3 +22,8 @@ BLACKBOARD_GROUP_FILE   = "ZZZ_BlackboardGroupMembers.xml"
 
 # Constants
 ENROL_GET_LIMIT = 50000 # Or some sufficiently large number
+
+# Don't output files - for debugging
+DEBUG = false
+NO_WRITE = false
+COURSE_FILTER = nil # ['_79661_1']
