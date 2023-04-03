@@ -175,8 +175,7 @@ class BBContent
             end
         end
 
-        
-        page.css("ul#content_listContainer li div.item h3 a").select { |x| x['href'].start_with?("/webapps/blackboard/content") && !x['href'].include?("launchAssessment.jsp?") }.each do |listing|
+        page.css("ul#content_listContainer li div.item h3 a").select { |x| x['href'].start_with?("/webapps/blackboard/content") && !x['href'].include?("launchAssessment.jsp?") && !x['href'].include?("contentWrapper.jsp?") }.each do |listing|
             CIO.puts "-> Found Content: #{listing.text}"
             # CIO.puts "#{listing}"
             CIO.push            
