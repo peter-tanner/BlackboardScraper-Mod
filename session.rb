@@ -4,6 +4,8 @@ require "uri"
 require "base64"
 require "nokogiri"
 
+require_relative 'ntu_login.rb'
+require_relative 'institution.rb'
 require_relative 'unit.rb'
 require_relative 'utils.rb'
 require_relative 'cio.rb'
@@ -15,7 +17,7 @@ class BBSession
     attr_accessor :units
     attr_accessor :http
 
-    def initialize username, password, cookie_file
+    def initialize username, password, cookie_file, institution
         # @user = username
         # @password = Base64.encode64(password)
         # @pwd_unicode = Base64.encode64(password.split("").product(["\x00"]).flatten.join("").force_encoding("US-ASCII")).strip
@@ -33,33 +35,55 @@ class BBSession
             # encoded_pw_unicode: @pwd_unicode
         }
         @cookies = {}
-
-        @baseurl = "https://lms.uwa.edu.au"
-        @trusted_domain = "uwa.edu.au"
-        @uri = URI.parse(@baseurl)
-        @http = Net::HTTP.new(@uri.host, @uri.port)
-
         @units = {}
 
-        # password = nil
-        # username = nil
-        # cookie_string = `python3 login.py#{pyargs}`.strip
-        # puts cookie_string
-        # pyargs = nil
-        # c = cookie_string.split('; ')
-        # c.each{ |c|
-        #     @cookies[c.split('=')[0]] = c.split('=')[1]
-        # }
-
-        mslogin = BBLogin.new username, password, cookie_file
-        if cookie_file
-            @cookies = mslogin.tryCookie
-        else 
-            @cookies = mslogin.getCookie
-        end
-        if @cookies.length == 0
-            puts 'Login error. Check your credentials. Exiting scraper.'
-            exit -1
+        case institution
+        when INSTITUTION::UWA
+            @baseurl = "https://lms.uwa.edu.au"
+            @trusted_domain = "uwa.edu.au"
+            @uri = URI.parse(@baseurl)
+            @http = Net::HTTP.new(@uri.host, @uri.port)
+    
+    
+            # password = nil
+            # username = nil
+            # cookie_string = `python3 login.py#{pyargs}`.strip
+            # puts cookie_string
+            # pyargs = nil
+            # c = cookie_string.split('; ')
+            # c.each{ |c|
+            #     @cookies[c.split('=')[0]] = c.split('=')[1]
+            # }
+    
+            mslogin = BBLogin.new username, password, cookie_file
+            if cookie_file
+                @cookies = mslogin.tryCookie
+            else 
+                @cookies = mslogin.getCookie
+            end
+            if @cookies.length == 0
+                puts 'Login error. Check your credentials. Exiting scraper.'
+                exit -1
+            end
+        when INSTITUTION::NTU
+            @baseurl = "https://ntulearn.ntu.edu.sg"
+            @trusted_domain = "ntu.edu.sg"
+            @uri = URI.parse(@baseurl)
+            @http = Net::HTTP.new(@uri.host, @uri.port)
+    
+            mslogin = BBLoginNTU.new username, password, cookie_file
+            if cookie_file
+                @cookies = mslogin.tryCookie
+            else 
+                @cookies = mslogin.getCookie
+            end
+            if @cookies.length == 0
+                puts 'Login error. Check your credentials. Exiting scraper.'
+                exit -1
+            end
+        else
+            puts "Invalid institution selected!"
+            exit(-1)
         end
     end
 

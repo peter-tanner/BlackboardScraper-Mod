@@ -2,7 +2,7 @@ require 'selenium-webdriver'
 require 'io/console' 
 require 'yaml'
 
-class BBLogin
+class BBLoginNTU
 
     def initialize username, password, cookie_file
         @cookie_file = cookie_file
@@ -12,7 +12,7 @@ class BBLogin
         # options.add_argument('--no-sandbox')
 
         # NOTE: REQUIRED FOR DEBUGGING
-        #options.add_argument("--headless"); #open Browser in maximized mode
+        options.add_argument("--headless"); #open Browser in maximized mode
         # if DEBUG
         #     options.add_argument("--headless"); #open Browser in maximized mode
         # end
@@ -21,16 +21,17 @@ class BBLogin
         @wait = Selenium::WebDriver::Wait.new(:timeout => 15)
     end
     
-    ID_BOX_USERNAME  = "i0116"
-    ID_BOX_PASSWORD  = "i0118"
+    ID_BOX_USERNAME  = "userNameInput"
+    ID_BOX_PASSWORD  = "passwordInput"
+
+
     ID_DIV_USERERROR = 'usernameError'
     ID_DIV_PASSERROR = 'passwordError'
-    ID_BUTTON_NEXT   = "idSIButton9"
-    ID_BUTTON_DENY   = "idBtn_Back"
+    ID_BUTTON_NEXT   = "submitButton"
 
-    TARGET_URL = 'https://lms.uwa.edu.au/ultra'
-    LOGIN_ENTRYPOINT_URL = 'https://lms.uwa.edu.au/auth-saml/saml/'
-    SUCC_URL = 'lms.uwa.edu.au'
+    TARGET_URL = 'https://ntulearn.ntu.edu.sg/?new_loc=/ultra/course'
+    LOGIN_ENTRYPOINT_URL = 'https://ntulearn.ntu.edu.sg/auth-saml/'
+    SUCC_URL = 'ntulearn.ntu.edu.sg'
 
     def tryCookie        
         cookies = nil
@@ -80,24 +81,11 @@ class BBLogin
         print "\n"
 
         # begin
-        clickElement(ID_BOX_USERNAME).send_keys(@username+"@student.uwa.edu.au").perform
+        clickElement(ID_BOX_USERNAME).send_keys(@username).perform
+        clickElement(ID_BOX_PASSWORD).send_keys(password).perform
+        password = nil
         clickElement(ID_BUTTON_NEXT).perform
-        puts "Entered username."
-        
-        begin
-            clickElement(ID_BOX_PASSWORD).send_keys(password).perform
-            password = nil
-            clickElement(ID_BUTTON_NEXT).perform
-            puts "Entered password."
-        rescue
-            # IF WE CANNOT ENTER THE PASSWORD, THEN THE USERNAME STEP HAS FAILED.
-            printElement(ID_DIV_USERERROR)
-            @driver.quit
-            exit -1
-        end
-
-        clickElement(ID_BUTTON_DENY).perform
-        # clickElement(BUTTON_NEXT).perform # IF you want to remember credentials, switch these comments
+        puts "Entered username and passsword."
         
         begin
             @wait.until{@driver.current_url.include?(SUCC_URL)}

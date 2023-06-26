@@ -2,6 +2,7 @@
 
 require_relative 'session.rb'
 require_relative 'constants.rb'
+require_relative 'institution.rb'
 
 require 'optparse'
 require 'fileutils'
@@ -18,6 +19,7 @@ options = {}
 password = nil
 username = nil
 cookie_file = nil
+$INSTITUTION = INSTITUTION::UWA
 $BASEPATH = "../blackboard"
 $GRADES = false
 OptionParser.new do |opts|
@@ -36,6 +38,9 @@ OptionParser.new do |opts|
     end
     opts.on("-g", "--grades", "Download assessment and grade files") do |v|
         $GRADES = v
+    end
+    opts.on("-g", "--ntu", "NTULearn mode") do |v|
+        $INSTITUTION = INSTITUTION::NTU
     end
 end.parse!
 
@@ -57,7 +62,7 @@ if !File.writable?($BASEPATH)
     end
 end
 
-session = BBSession.new username, password, cookie_file
+session = BBSession.new username, password, cookie_file, $INSTITUTION
 username = nil
 password = nil
 

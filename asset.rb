@@ -51,11 +51,23 @@ class BBAsset
         folder = "#{basepath}/#{fqp}"
 
         url = @url
+        readable_url = url
         # If it contains cdn url don't change base url. (Cannot get filename from that temp. url)
         if !@regular_asset
             newurl = @session.doHead(url, false)["location"]
             unless (newurl.nil? || newurl.include?("blackboardcdn.com"))
-                url = newurl
+                url = newurl    # first layer of url.
+                readable_url = newurl
+            end
+
+            # NTU needs recursive resolver
+            # https://ntulearn.ntu.edu.sg/bbcswebdav/pid-<pid>-dt-content-rid-<content_rid>/xid-<content_rid>
+            # -> https://alt-<node_id>.blackboard.com/bbcswebdav/pid-<pid>-dt-content-rid-<content_rid>/xid-<content_rid>?one_hash=<one_hash>&f_hash=<f_hash>
+            # -> https://alt-<node_id>.blackboard.com/bbcswebdav/pid-<pid>-dt-content-rid-<content_rid>/courses/<course_id>/<file_name_human_readable>?one_hash=<one_hash>&f_hash=<f_hash>
+            # -> blackboardcdn.com url
+            while !(newurl.nil? || newurl.include?("blackboardcdn.com"))
+                readable_url = newurl
+                newurl = @session.doHead(readable_url, false)["location"]
             end
         end
 
@@ -68,7 +80,7 @@ class BBAsset
         etag = head_cdn['etag'] ? head_cdn['etag'].undump : head_cdn['content-length']
         @hash = Digest::MD5.hexdigest etag
         # override_name for annotated submissions
-        filename = @override_name ? @name : File.basename(URI.parse(url).path)
+        filename = @override_name ? @name : File.basename(URI.parse(readable_url).path)
         hfilename = conv_filename(filename)
         filepath = "#{folder}/#{hfilename}"
         metacsv_filepath = "#{folder}/#{FILE_METADATA_DIRNAME}/#{hfilename}__metadata.csv"
@@ -124,7 +136,8 @@ class BBAsset
                 ["age",                 head_cdn["age"]],
                 ["path",                path],
                 ["title",               name],
-                ["overrride_name",      @override_name]
+                ["overrride_name",      @override_name],
+                ["readable_url",        readable_url]
             ]
 
             File.open(metacsv_filepath, 'wb') do |f|
