@@ -103,6 +103,36 @@ ERROR_LIST = [
     Net::HTTPBadResponse, Net::HTTPHeaderSyntaxError, Net::ProtocolError
 ]
 
+def summarize_downloaded downloaded
+    CIO.puts "FINISHED DOWNLOADING ITEMS!"
+
+    itemcount = downloaded.length
+    if downloaded.length > 0
+        puts ""
+        puts ""
+        CIO.puts " - DOWNLOAD SUMMARY - "
+        CIO.push
+        downloaded.each_with_index do |f, i|
+            if ( !f.key?("metacontent") )
+                CIO.puts colorize("+ #{f["name"]}", "\e[32m")
+            elsif ( f.key?("metacontent") && f["metacontent"].length > 0 )
+                itemcount += f["metacontent"].length
+                CIO.puts colorize("+ #{f["name"]}", "\e[32m")
+                CIO.push
+                f["metacontent"].each_with_index do |fz, j|
+                    CIO.puts colorize("+ #{fz}", "\e[32m")
+                end
+                CIO.pop
+            end
+        end
+        CIO.puts colorize("Downloaded #{itemcount} items.", "\e[32m")
+        CIO.save "#{$BASEPATH}/#{SCRAPER_LOGS_DIRNAME}/#{DateTime.now.strftime('%Y-%m-%dT%H%M')}.log"
+        print "Press any key to continue . . ."
+        STDIN.getch
+        puts ""
+    end
+end
+
 begin
     CIO.puts
     CIO.puts colorize("Downloading Assets...","\e[1;33m")
@@ -120,34 +150,14 @@ begin
     end
 rescue *ERROR_LIST => e
     CIO.puts "HTTP ERROR #{e}. Stop download."
-# rescue StandardError => e
-#     CIO.puts e
+    summarize_downloaded downloaded
+rescue Interrupt => e
+    CIO.puts "Terminated by user! #{e}"
+    summarize_downloaded downloaded
+rescue Exception => e   # Rescue all (even ctrl+c)
+    CIO.puts "ERROR #{e}. Stop download."
+    summarize_downloaded downloaded
 end
 
-CIO.puts "FINISHED DOWNLOADING ITEMS!"
+summarize_downloaded downloaded
 
-itemcount = downloaded.length
-if downloaded.length > 0
-    puts ""
-    puts ""
-    CIO.puts " - DOWNLOAD SUMMARY - "
-    CIO.push
-    downloaded.each_with_index do |f, i|
-        if ( !f.key?("metacontent") )
-            CIO.puts colorize("+ #{f["name"]}", "\e[32m")
-        elsif ( f.key?("metacontent") && f["metacontent"].length > 0 )
-            itemcount += f["metacontent"].length
-            CIO.puts colorize("+ #{f["name"]}", "\e[32m")
-            CIO.push
-            f["metacontent"].each_with_index do |fz, j|
-                CIO.puts colorize("+ #{fz}", "\e[32m")
-            end
-            CIO.pop
-        end
-    end
-    CIO.puts colorize("Downloaded #{itemcount} items.", "\e[32m")
-    CIO.save "#{$BASEPATH}/#{SCRAPER_LOGS_DIRNAME}/#{DateTime.now.strftime('%Y-%m-%dT%H%M')}.log"
-    print "Press any key to continue . . ."
-    STDIN.getch
-    puts ""
-end

@@ -157,6 +157,10 @@ class BBSession
                 puts e
                 sleep 5
                 next
+            rescue SocketError => e
+                puts e
+                sleep 5
+                next
             rescue => e
                 raise e
             end
