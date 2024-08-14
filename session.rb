@@ -17,7 +17,7 @@ class BBSession
     attr_accessor :units
     attr_accessor :http
 
-    def initialize username, password, cookie_file, institution
+    def initialize username, password, cookie_file, institution, community
         # @user = username
         # @password = Base64.encode64(password)
         # @pwd_unicode = Base64.encode64(password.split("").product(["\x00"]).flatten.join("").force_encoding("US-ASCII")).strip
@@ -36,6 +36,7 @@ class BBSession
         }
         @cookies = {}
         @units = {}
+        @community = community
 
         case institution
         when INSTITUTION::UWA
@@ -192,8 +193,12 @@ class BBSession
         puts "Fetching Units...."
         CIO.push
 
-        # html = doGet("webapps/portal/execute/tabs/tabAction?action=refreshAjaxModule&modId=_4_1&tabId=_1_1&tab_tab_group_id=_1_1").body # use for community pages!
-        html = doGet("webapps/portal/execute/tabs/tabAction?action=refreshAjaxModule&modId=_3_1&tabId=_1_1&tab_tab_group_id=_1_1").body
+        if @community
+            html = doGet("webapps/portal/execute/tabs/tabAction?action=refreshAjaxModule&modId=_4_1&tabId=_1_1&tab_tab_group_id=_1_1").body # use for community pages!
+        else
+            html = doGet("webapps/portal/execute/tabs/tabAction?action=refreshAjaxModule&modId=_3_1&tabId=_1_1&tab_tab_group_id=_1_1").body
+        end
+
         page = Nokogiri::HTML(html)
         @units = Hash[page.css('ul.courseListing li a').map do |el|
             tmp = el['href'].scan(/\&id=([-_0-9]+)\&/)

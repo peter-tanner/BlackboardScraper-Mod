@@ -22,6 +22,7 @@ cookie_file = nil
 $INSTITUTION = INSTITUTION::UWA
 $BASEPATH = "../blackboard"
 $GRADES = false
+$COMMUITY = false
 OptionParser.new do |opts|
     opts.banner = "Usage: scraper.rb [options]"
     # opts.on("-p", "--password=PASSWORD", "Automatically use provided password") do |v|
@@ -39,8 +40,11 @@ OptionParser.new do |opts|
     opts.on("-g", "--grades", "Download assessment and grade files") do |v|
         $GRADES = v
     end
-    opts.on("-g", "--ntu", "NTULearn mode") do |v|
+    opts.on("-n", "--ntu", "NTULearn mode") do |v|
         $INSTITUTION = INSTITUTION::NTU
+    end
+    opts.on("-c", "--community", "Download community pages instead of units") do |v|
+        $COMMUITY = v
     end
 end.parse!
 
@@ -62,7 +66,7 @@ if !File.writable?($BASEPATH)
     end
 end
 
-session = BBSession.new username, password, cookie_file, $INSTITUTION
+session = BBSession.new username, password, cookie_file, $INSTITUTION, $COMMUITY
 username = nil
 password = nil
 

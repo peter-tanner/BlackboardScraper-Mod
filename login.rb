@@ -12,7 +12,7 @@ class BBLogin
         # options.add_argument('--no-sandbox')
 
         # NOTE: REQUIRED FOR DEBUGGING
-        #options.add_argument("--headless"); #open Browser in maximized mode
+        options.add_argument("--headless"); #open Browser in maximized mode
         # if DEBUG
         #     options.add_argument("--headless"); #open Browser in maximized mode
         # end
