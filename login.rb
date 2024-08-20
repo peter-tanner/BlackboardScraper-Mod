@@ -18,7 +18,7 @@ class BBLogin
         # end
 
         @driver = Selenium::WebDriver.for :chrome, options: options
-        @wait = Selenium::WebDriver::Wait.new(:timeout => 15)
+        @wait = Selenium::WebDriver::Wait.new(:timeout => 60)
     end
     
     ID_BOX_USERNAME  = "i0116"
