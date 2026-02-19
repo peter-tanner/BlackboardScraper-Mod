@@ -8,9 +8,14 @@ cd chromedriver_install
 chrome_version=$(google-chrome --version | grep -oP "\d+\.\d+\.\d+\.\d+")
 
 # Extract the URL for the matching Chrome version
-download_url=$(curl -s https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json | jq -r --arg version "$chrome_version" '
-  .versions[] | select(.version == $version) | .downloads.chromedriver[] | select(.platform == "linux64") | .url
-')
+download_url=$(curl -s https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json \
+| jq -r --arg prefix "${chrome_version%.*}" '
+  .channels | to_entries[]
+  | .value.downloads.chromedriver[]
+  | select(.url | contains($prefix))
+  | select(.platform == "linux64")
+  | .url
+' | sort -V | tail -n1)
 
 if [ -z "$download_url" ]; then
   echo "No matching download URL found for Chrome version $chrome_version"

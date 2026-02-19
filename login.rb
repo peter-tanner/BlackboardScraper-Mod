@@ -12,7 +12,7 @@ class BBLogin
         # options.add_argument('--no-sandbox')
 
         # NOTE: REQUIRED FOR DEBUGGING
-        options.add_argument("--headless"); #open Browser in maximized mode
+        # options.add_argument("--headless"); #open Browser in maximized mode
         # if DEBUG
         #     options.add_argument("--headless"); #open Browser in maximized mode
         # end
@@ -75,12 +75,13 @@ class BBLogin
             print "\n"
         end
 
+        clickElement(ID_BOX_USERNAME).send_keys(@username+"@student.uwa.edu.au").perform
+
         print "Password: "
         password = STDIN.getpass().sub(/^\e\[200~/,'').sub(/\e\[201~$/,'')
         print "\n"
 
         # begin
-        clickElement(ID_BOX_USERNAME).send_keys(@username+"@student.uwa.edu.au").perform
         clickElement(ID_BUTTON_NEXT).perform
         puts "Entered username."
         
