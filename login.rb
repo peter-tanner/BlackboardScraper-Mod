@@ -81,6 +81,8 @@ class BBLogin
         password = STDIN.getpass().sub(/^\e\[200~/,'').sub(/\e\[201~$/,'')
         print "\n"
 
+        
+
         # begin
         clickElement(ID_BUTTON_NEXT).perform
         puts "Entered username."
@@ -130,17 +132,26 @@ class BBLogin
         FileUtils.mkdir_p(File.dirname(@cookie_file))
         File.write(@cookie_file, YAML.dump(@driver.manage.all_cookies))
     end
-  
+
+    private def waitElement selector
+        e = nil
+        while !e
+            begin
+                @wait.until{@driver.find_element(id: selector).displayed?}
+                e = @driver.find_element(id: selector)
+            rescue Selenium::WebDriver::Error::StaleElementReferenceError
+                nil
+            end
+        end
+        return e
+    end
+
     private def clickElement selector
-        @wait.until{@driver.find_element(id: selector).displayed?}
-        clickable = @driver.find_element(id: selector)
-        return @driver.action
-            .click(clickable)
+        return @driver.action.click(waitElement(selector))
     end
 
     private def printElement selector
-        @wait.until{@driver.find_element(id: selector).displayed?}
-        puts(@driver.find_element(id: selector).text)
+        puts(waitElement(selector).text)
     end
 
 end
