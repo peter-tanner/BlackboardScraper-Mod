@@ -72,12 +72,18 @@ class BBContent
                 @request = "webapps/blackboard/content/launchLink.jsp?course_id=#{@unit.id}&tool_id=#{id}&tool_type=TOOL&mode=view&mode=reset"
             when CONTENT_TYPE::GRADES
                 @request = "webapps/blackboard/content/launchLink.jsp?course_id=#{@unit.id}&tool_id=#{BLACKBOARD_TOOL_ID_GRADES}&tool_type=TOOL&mode=view&mode=reset"
+            when CONTENT_TYPE::GENERIC_LAUNCH_LINK
+                @request = "webapps/blackboard/content/launchLink.jsp?course_id=#{@unit.id}&content_id=#{id}&mode=reset"
             when CONTENT_TYPE::GROUP
                 @request = "webapps/blackboard/execute/modulepage/viewGroup?course_id=#{unit.id}&group_id=#{id}"
+            when CONTENT_TYPE::LEARNING_UNIT
+                @request = "/webapps/blackboard/execute/displayLearningUnit?course_id=#{unit.id}&content_id=#{id}"
             else
                 raise "Error - invalid content type."
             end
         end
+
+        # CIO.puts "[DEBUG] #{@request}"
 
         html = @unit.session.doGet(@request).body
         page = Nokogiri::HTML(html)
@@ -104,16 +110,19 @@ class BBContent
         when CONTENT_TYPE::GROUP
             group = BBGroup.new(self)
             group.downloadMembers("#{unit_path}/#{folder_name}/#{BLACKBOARD_GROUP_FILE}")
-        when CONTENT_TYPE::GRADES
+        when CONTENT_TYPE::GRADES, CONTENT_TYPE::TOOL
+            # NOTE: lazily catching all content type tool, but the checks should prevent other tools being interpreted as grades.
             page.css("a[onclick]").each do |listing|
-                onclick_action = listing['onclick']
-                if onclick_action.include?("/webapps")
-                    link = onclick_action.match(/loadContentFrame\('(.*)'\)/)[1]
-                    parameters = CGI.parse(URI.parse(link).query)
-                    if link.include?("/webapps/assignment/uploadAssignment") && parameters['action'].first == "showHistory"
-                        addContent(unit, parameters['outcome_id'].first, listing.text, "#{path}/#{folder_name}", CONTENT_TYPE::UPLOAD_ASSIGNMENT, link)
-                    elsif link.include?("/webapps/gradebook/do/student/viewAttempts")
-                        addContent(unit, parameters['outcome_id'].first, listing.text, "#{path}/#{folder_name}", CONTENT_TYPE::VIEW_ATTEMPTS, link)
+                onclick_action = listing&.[]('onclick')
+                if onclick_action&.include?("/webapps")
+                    link = onclick_action&.match(/loadContentFrame\('(.*)'\)/)&.[](1)
+                    if link
+                        parameters = CGI.parse(URI.parse(link).query)
+                        if link.include?("/webapps/assignment/uploadAssignment") && parameters['action'].first == "showHistory"
+                            addContent(unit, parameters['outcome_id'].first, listing.text, "#{path}/#{folder_name}", CONTENT_TYPE::UPLOAD_ASSIGNMENT, link)
+                        elsif link.include?("/webapps/gradebook/do/student/viewAttempts")
+                            addContent(unit, parameters['outcome_id'].first, listing.text, "#{path}/#{folder_name}", CONTENT_TYPE::VIEW_ATTEMPTS, link)
+                        end
                     end
                 end
             end
@@ -125,7 +134,7 @@ class BBContent
                     addContent(unit, parameters['attempt_id'].first, "ATTEMPT_#{parameters['attempt_id'].first}", "#{path}/#{folder_name}", CONTENT_TYPE::REVIEW_ATTEMPT, link)
                 end
             end
-        when CONTENT_TYPE::BLANK_PAGE, CONTENT_TYPE::UPLOAD_ASSIGNMENT, CONTENT_TYPE::REVIEW_ATTEMPT
+        when CONTENT_TYPE::BLANK_PAGE, CONTENT_TYPE::UPLOAD_ASSIGNMENT, CONTENT_TYPE::REVIEW_ATTEMPT, CONTENT_TYPE::LEARNING_UNIT
             # It is too hard to scan a blank page since the user can define what ever structure they want for it. Just pick every href that starts with /bbcswebdav
             page.css("div#containerdiv.container.clearfix").each do |section|
                 for selector in BLANK_PAGE_SELECTORS do
@@ -137,6 +146,20 @@ class BBContent
                         addAsset(asset[attribute], asset.text, "NULL_SECTION") 
                     }
                 end
+            end
+        end
+
+        if @contentType == CONTENT_TYPE::LEARNING_UNIT
+            tree = @unit.session.doGet("https://lms.uwa.edu.au/webapps/blackboard/execute/learningUnitTocTreeViewGenerator?storeScope=Session&expandAll=true&learningUnitId=#{id}&instructorView=false&course_id=#{unit.id}").body
+            # TODO: Lazy regex- should parse json instead..
+            # TODO: not a 1-1 replica of new experience, treats them as old pages.
+            tree.scan(/\&content_id=([-_0-9]+).*?>(.*?)<\\\/a>/).each do |sub_learning|
+                sub_learning_id = sub_learning.first
+                sub_learning_name = sub_learning.last
+                CIO.puts "-> Found Content [learning unit]: #{sub_learning_name}"
+                CIO.push
+                addContent(unit, sub_learning_id, sub_learning_name, "#{path}/#{folder_name}", CONTENT_TYPE::LEARNING_UNIT)
+                CIO.pop
             end
         end
 
@@ -175,15 +198,24 @@ class BBContent
             end
         end
 
-        page.css("ul#content_listContainer li div.item h3 a").select { |x| x['href'].start_with?("/webapps/blackboard/content") && !x['href'].include?("launchAssessment.jsp?") && !x['href'].include?("contentWrapper.jsp?") }.each do |listing|
+        page.css("ul#content_listContainer li div.item h3 a").select { 
+            |x| (x['href'].start_with?("/webapps/blackboard/content")                     \
+            || x['href'].start_with?("/webapps/blackboard/execute/displayLearningUnit"))  \
+            && !x['href'].include?("launchAssessment.jsp?")                               \
+            && !x['href'].include?("contentWrapper.jsp?")
+        }.each do |listing|
             CIO.puts "-> Found Content: #{listing.text}"
-            # CIO.puts "#{listing}"
-            CIO.push            
+            # CIO.puts "[DEBUG]#{listing['href']} #{path}/#{folder_name}"
+            CIO.push
             contentid = listing['href'].scan(/\&content_id=([-_0-9]+)/).last.first
             
             type = CONTENT_TYPE::CONTENT
             if listing['href'].include? "blankPage"
                 type = CONTENT_TYPE::BLANK_PAGE
+            elsif listing['href'].include? "launchLink.jsp"
+                type = CONTENT_TYPE::GENERIC_LAUNCH_LINK
+            elsif listing['href'].include? "displayLearningUnit"
+                type = CONTENT_TYPE::LEARNING_UNIT
             end
             
             addContent(unit, contentid, listing.text, "#{path}/#{folder_name}", type)

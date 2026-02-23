@@ -60,9 +60,11 @@ class BBUnit
         page.css('ul#courseMenuPalette_contents li a').each do |listing|
 
             valid = false
+            learningunitsids = listing['href'].scan(/displayLearningUnit.*\&content_id=([-_0-9]+)\&/)
             contentids = listing['href'].scan(/listContent.*\&content_id=([-_0-9]+)\&/)
             blankids = listing['href'].scan(/blankPage.*\&content_id=([-_0-9]+)\&/)
             toolids = listing['href'].scan(/\&tool_id=([-_0-9]+)/)
+
             unless contentids.empty?
                 CIO.puts "Discovered Listing -> #{listing.text}.... valid! (Content)"
                 contentid = contentids.last.first
@@ -81,6 +83,13 @@ class BBUnit
                 CIO.puts "Discovered Listing -> #{listing.text}.... valid! (Tool)"
                 toolid = toolids.last.first
                 @listings[toolid] = BBContent.new(self, toolid, listing.text, "#{path}/#{folder_name}/#{BLACKBOARD_TOOLS_DIRNAME}", CONTENT_TYPE::TOOL)
+                valid = true
+            end
+            
+            unless learningunitsids.empty?
+                CIO.puts "Discovered Listing -> #{listing.text}.... valid! (Learning Unit)"
+                toolid = learningunitsids.last.first
+                @listings[learningunitsids] = BBContent.new(self, toolid, listing.text, "#{path}/#{folder_name}/#{BLACKBOARD_TOOLS_DIRNAME}", CONTENT_TYPE::LEARNING_UNIT)
                 valid = true
             end
 
