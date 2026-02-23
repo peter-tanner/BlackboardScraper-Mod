@@ -1,8 +1,14 @@
 # Blackboard Scraper
 
-## Fork of https://github.com/JaciBrunning/BlackboardScraper
+## Fork of https://github.com/JaciBrunning/BlackboardScraper for UWA and NTU\* LMS
 
-## Use at own risk!
+_\*I've briefly used the script on my exchange with NTU in 2023 but I do not guarantee that it still works today._
+
+## Please use responsibly
+
+Please do not redistribute content saved using this script! I've made this script strictly for saving content of courses I am enrolled in for my own learning, not to redistribute content illegally.
+
+Obviously I do not store your login details, you may review `login.rb` to see how it works. I've opted to use a selenium instance since automating the MS login prompt is too hard.
 
 ### Why?
 
@@ -24,7 +30,6 @@ This tool downloads most unit materials, but will NOT download iLectures, announ
 - Install the `nokogiri` gem (Installing this gem on msys (Windows) doesn't work. Need to use WSL or something else.)
 - Install the `rubyzip` gem (OPTIONAL - to automatically unzip any zip files downloaded)
 - Install the `selenium-webdriver` gem - We need this to automate the Microsoft SSO/login.
-
   - An alternative way is to use an older version of BlackboardScraper which used python selenium webdriver.
 
   > `gem install nokogiri rubyzip selenium-webdriver`
@@ -35,7 +40,7 @@ This tool downloads most unit materials, but will NOT download iLectures, announ
 ## Usage
 
 - Run the `scraper.rb` file:
-  - `ruby scraper.rb` - It will ask for your Blackboard username (student ID) and password, and will then work on its own, downloading course materials. It will take quite a while, and it's recommended to do it on a fast internet connection.
+  - `ruby scraper.rb` - It will ask for your Blackboard username (student ID) and password (and outlook 2FA prompt in the case of UWA), and will then work on its own, downloading course materials. It will take quite a while, and it's recommended to do it on a fast internet connection.
 - Your course materials will now be in `out/`
 - The script has a wait timer. Modify `$WAIT = 5` in `scraper.rb` to whatever seconds you want to wait between operations. This is to reduce stress on the server.
 
@@ -44,3 +49,5 @@ This tool downloads most unit materials, but will NOT download iLectures, announ
 For units that like to have long folder/file names, you may find PDF readers or other applications fail to open the files and will promptly crash with no explanation. This is because the full path of the downloaded asset is longer than the system max filepath length (260 characters on windows, 1016 characters on macOS, 4096 on most linux distros).
 
 Fix: move the file somewhere with a shorter path (like your Desktop, or Documents), or rename the files/folders after they have been downloaded to something less long.
+
+Some directories and files may not be accessible on Windows since it may contain illegal characters such as ':'. I personally run it using WSL.
