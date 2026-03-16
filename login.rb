@@ -4,11 +4,16 @@ require 'yaml'
 
 class BBLogin
 
-    def initialize username, password, cookie_file
+    def initialize username, password, cookie_file, persistent_session_dir
         @cookie_file = cookie_file
         @username = username
 
         options = Selenium::WebDriver::Chrome::Options.new
+
+        if persistent_session_dir 
+            options.add_argument("--user-data-dir=#{persistent_session_dir}")
+        end
+
         # options.add_argument('--no-sandbox')
 
         # NOTE: REQUIRED FOR DEBUGGING
@@ -19,6 +24,7 @@ class BBLogin
 
         @driver = Selenium::WebDriver.for :chrome, options: options
         @wait = Selenium::WebDriver::Wait.new(:timeout => 60)
+        @wait_persist = Selenium::WebDriver::Wait.new(:timeout => 15)
     end
     
     ID_BOX_USERNAME  = "i0116"
@@ -34,32 +40,38 @@ class BBLogin
 
     def tryCookie        
         cookies = nil
+        @driver.get(LOGIN_ENTRYPOINT_URL) # Page which does not redirect to MS login.
+        puts 'Trying login session. (will prompt manual login if session cannot be restored in 15 seconds)'
+        if @cookie_file
+            begin
+                cookies = File.open(@cookie_file)
+            rescue
+                puts 'Could not read cookie file.'
+                puts 'Trying normal login.'
+                @driver.get(TARGET_URL)
+                return tryMSlogin()
+            end
+            
+            cookies = YAML.load(cookies)
+            for cookie in cookies do
+                @driver.manage.add_cookie(cookie)
+            end
+        end
+
+        @driver.get(TARGET_URL)
+                
         begin
-            cookies = File.open(@cookie_file)
-        rescue
-            puts 'Could not read cookie file.'
-            puts 'Trying normal login.'
+            @wait_persist.until{@driver.current_url.include?(SUCC_URL)}
+        rescue Exception => e
+            puts 'Could not get auth cookie - Cookie expired?'
+            puts "Trying normal login. (#{e})"
+            @driver.manage.delete_all_cookies # hack, otherwise the autofilled username messes up the flow.
             @driver.get(TARGET_URL)
             return tryMSlogin()
         end
         
-        @driver.get(LOGIN_ENTRYPOINT_URL) # Page which does not redirect to MS login.
-        
-        cookies = YAML.load(cookies)
-        for cookie in cookies do
-            @driver.manage.add_cookie(cookie)
-        end
-        @driver.get(TARGET_URL)
-                
-        begin
-            @wait.until{@driver.current_url.include?(SUCC_URL)}
-            writeCookieFile()
-            return reformatCookie()
-        rescue
-            puts 'Could not get auth cookie - Cookie expired?'
-            puts 'Trying normal login.'
-            return tryMSlogin()
-        end
+        writeCookieFile()
+        return reformatCookie()
     end
 
     def getCookie
@@ -99,8 +111,8 @@ class BBLogin
             exit -1
         end
 
-        clickElement(ID_BUTTON_DENY).perform
-        # clickElement(BUTTON_NEXT).perform # IF you want to remember credentials, switch these comments
+        # clickElement(ID_BUTTON_DENY).perform # forget credentials
+        clickElement(ID_BUTTON_NEXT).perform # remember credentials (for case of persistent session - no effect otherwise)
         
         begin
             @wait.until{@driver.current_url.include?(SUCC_URL)}
@@ -129,8 +141,10 @@ class BBLogin
     end
 
     private def writeCookieFile
-        FileUtils.mkdir_p(File.dirname(@cookie_file))
-        File.write(@cookie_file, YAML.dump(@driver.manage.all_cookies))
+        if @cookie_file
+            FileUtils.mkdir_p(File.dirname(@cookie_file))
+            File.write(@cookie_file, YAML.dump(@driver.manage.all_cookies))
+        end
     end
 
     private def waitElement selector

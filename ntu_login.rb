@@ -4,11 +4,16 @@ require 'yaml'
 
 class BBLoginNTU
 
-    def initialize username, password, cookie_file
+    def initialize username, password, cookie_file, persistent_session_dir
         @cookie_file = cookie_file
         @username = username
 
         options = Selenium::WebDriver::Chrome::Options.new
+
+        if persistent_session_dir
+            options.add_argument("--user-data-dir=#{persistent_session_dir}")
+        end
+
         # options.add_argument('--no-sandbox')
 
         # NOTE: REQUIRED FOR DEBUGGING
@@ -35,32 +40,35 @@ class BBLoginNTU
 
     def tryCookie        
         cookies = nil
-        begin
-            cookies = File.open(@cookie_file)
-        rescue
-            puts 'Could not read cookie file.'
-            puts 'Trying normal login.'
-            @driver.get(TARGET_URL)
-            return tryMSlogin()
-        end
-        
         @driver.get(LOGIN_ENTRYPOINT_URL) # Page which does not redirect to MS login.
-        
-        cookies = YAML.load(cookies)
-        for cookie in cookies do
-            @driver.manage.add_cookie(cookie)
+        if @cookie_file
+            begin
+                cookies = File.open(@cookie_file)
+            rescue
+                puts 'Could not read cookie file.'
+                puts 'Trying normal login.'
+                @driver.get(TARGET_URL)
+                return tryMSlogin()
+            end
+            
+            cookies = YAML.load(cookies)
+            for cookie in cookies do
+                @driver.manage.add_cookie(cookie)
+            end
         end
+        
         @driver.get(TARGET_URL)
                 
         begin
             @wait.until{@driver.current_url.include?(SUCC_URL)}
-            writeCookieFile()
-            return reformatCookie()
-        rescue
+        rescue Exception => e
             puts 'Could not get auth cookie - Cookie expired?'
-            puts 'Trying normal login.'
+            puts "Trying normal login. (#{e})"
             return tryMSlogin()
         end
+        
+        writeCookieFile()
+        return reformatCookie()
     end
 
     def getCookie
@@ -114,8 +122,10 @@ class BBLoginNTU
     end
 
     private def writeCookieFile
-        FileUtils.mkdir_p(File.dirname(@cookie_file))
-        File.write(@cookie_file, YAML.dump(@driver.manage.all_cookies))
+        if @cookie_file
+            FileUtils.mkdir_p(File.dirname(@cookie_file))
+            File.write(@cookie_file, YAML.dump(@driver.manage.all_cookies))
+        end
     end
   
     private def clickElement selector

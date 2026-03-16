@@ -23,7 +23,7 @@ module CIO
         @indent ||= 0
         text = "#{(["\t"]*@indent).join("")}#{text}"
         ORIGINALPUTS.call text
-        @text.push(text)
+        @text.push(text.force_encoding("UTF-8"))
     end
 
     def self.with &block

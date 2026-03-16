@@ -19,6 +19,7 @@ options = {}
 password = nil
 username = nil
 cookie_file = nil
+persistent_session_dir = nil
 $INSTITUTION = INSTITUTION::UWA
 $BASEPATH = "../blackboard"
 $GRADES = false
@@ -34,8 +35,11 @@ OptionParser.new do |opts|
     opts.on("-p", "--path=PATH", "Path to download files to") do |v|
         $BASEPATH = v
     end
-    opts.on("-c", "--cookie_file=FILE", "Path to store cookie file at") do |v|
+    opts.on("-c", "--cookie_file=FILE", "OBSOLETE - USE --persistent_session") do |v|
         cookie_file = v
+    end
+    opts.on("-s", "--persistent_session=PATH", "Path to store cookies and local storage for persisting login session") do |v|
+        persistent_session_dir = v
     end
     opts.on("-g", "--grades", "Download assessment and grade files") do |v|
         $GRADES = v
@@ -66,7 +70,7 @@ if !File.writable?($BASEPATH)
     end
 end
 
-session = BBSession.new username, password, cookie_file, $INSTITUTION, $COMMUITY
+session = BBSession.new username, password, cookie_file, persistent_session_dir, $INSTITUTION, $COMMUITY
 username = nil
 password = nil
 

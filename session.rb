@@ -17,7 +17,7 @@ class BBSession
     attr_accessor :units
     attr_accessor :http
 
-    def initialize username, password, cookie_file, institution, community
+    def initialize username, password, cookie_file, persistent_session_dir, institution, community
         # @user = username
         # @password = Base64.encode64(password)
         # @pwd_unicode = Base64.encode64(password.split("").product(["\x00"]).flatten.join("").force_encoding("US-ASCII")).strip
@@ -56,8 +56,8 @@ class BBSession
             #     @cookies[c.split('=')[0]] = c.split('=')[1]
             # }
     
-            mslogin = BBLogin.new username, password, cookie_file
-            if cookie_file
+            mslogin = BBLogin.new username, password, cookie_file, persistent_session_dir
+            if cookie_file or persistent_session_dir
                 @cookies = mslogin.tryCookie
             else 
                 @cookies = mslogin.getCookie
@@ -72,7 +72,7 @@ class BBSession
             @uri = URI.parse(@baseurl)
             @http = Net::HTTP.new(@uri.host, @uri.port)
     
-            mslogin = BBLoginNTU.new username, password, cookie_file
+            mslogin = BBLoginNTU.new username, password, cookie_file, persistent_session_dir
             if cookie_file
                 @cookies = mslogin.tryCookie
             else 
