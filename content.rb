@@ -32,7 +32,7 @@ class BBContent
         ["* *[href]",       "href"],
         ["* img[src]",      "src"],
         ["* video[src]",    "src"],
-        ["* embed[src]",    "src"], # execute/displayLearningUnit for embedded PDFs
+        ["  embed[src]",    "src"], # execute/displayLearningUnit for embedded PDFs. Can be a direct child.
     ]
 
     def initialize unit, id, name, path, contentType=CONTENT_TYPE::CONTENT, request=nil
