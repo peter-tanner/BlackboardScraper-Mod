@@ -33,6 +33,7 @@ class BBContent
         ["* img[src]",      "src"],
         ["* video[src]",    "src"],
         ["  embed[src]",    "src"], # execute/displayLearningUnit for embedded PDFs. Can be a direct child.
+        ["  iframe[src]",   "src"], # execute/displayLearningUnit for embedded attachments (PPTX, ...). Can be a direct child.
     ]
 
     def initialize unit, id, name, path, contentType=CONTENT_TYPE::CONTENT, request=nil
