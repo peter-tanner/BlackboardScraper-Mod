@@ -141,12 +141,24 @@ class BBContent
             page.css("div#containerdiv.container.clearfix").each do |section|
                 for selector in BLANK_PAGE_SELECTORS do
                     attribute = selector[1]
+
                     section.css(selector[0])
-                    .select { |x| x[attribute].include?("/bbcswebdav") }
-                    .each { |asset| 
-                        asset[attribute] = asset[attribute].sub(/^.*\/bbcswebdav/,'/bbcswebdav')
-                        addAsset(asset[attribute], asset.text, "NULL_SECTION") 
-                    }
+                        .select { |x| x[attribute].include?("/bbcswebdav") }
+                        .each { |asset| 
+                            asset[attribute] = asset[attribute].sub(/^.*\/bbcswebdav/,'/bbcswebdav')
+                            addAsset(asset[attribute], asset.text, "NULL_SECTION") 
+                        }
+
+                    section.css(selector[0])
+                        .select { |x| x[attribute].include?("/webapps/blackboard/content/downloadWrapper.jsp") }
+                        .each { |asset| 
+                            unwrapped_uri = CGI.parse(URI.parse(asset[attribute]).query)
+                            unwrapped_href = unwrapped_uri&.[]('href')&.[](0)
+                            if unwrapped_href
+                                asset[attribute] = unwrapped_href.sub(/^.*\/bbcswebdav/,'/bbcswebdav')
+                                addAsset(asset[attribute], asset.text, "NULL_SECTION") 
+                            end
+                        }
                 end
             end
         end
@@ -165,6 +177,7 @@ class BBContent
             end
         end
 
+        # Download grade feedback and submitted files to lms.
         if @contentType == CONTENT_TYPE::UPLOAD_ASSIGNMENT
             # GET SUBMITTED FILES
             page.css("div#containerdiv.container.clearfix a[href]").each do |attempt|
@@ -243,12 +256,14 @@ class BBContent
                 # Basically don't be alarmed if you see some items under folders that don't have a [content_id] on the end.
                 for selector in CONTENT_SELECTORS do
                     attribute = selector[1]
+
+                    # TODO: clarify if /webapps/blackboard/content/downloadWrapper.jsp paths exist here.
                     section.css(selector[0])
-                    .select { |x| x[attribute].include?("/bbcswebdav") }
-                    .each { |asset| 
-                        asset[attribute] = asset[attribute].sub(/^.*\/bbcswebdav/,'/bbcswebdav')
-                        addAsset(asset[attribute], asset.text, sectionName) 
-                    }
+                        .select { |x| x[attribute].include?("/bbcswebdav") }
+                        .each { |asset| 
+                            asset[attribute] = asset[attribute].sub(/^.*\/bbcswebdav/,'/bbcswebdav')
+                            addAsset(asset[attribute], asset.text, sectionName) 
+                        }
                 end
             end
         end
